@@ -4,7 +4,8 @@ import {
   getAllProducts,
   getProductById,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  addReview,
 } from "../controllers/product.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import { isAdmin } from "../middleware/admin.middleware.js";
@@ -15,10 +16,13 @@ const router = express.Router();
 // USER
 router.get("/", getAllProducts);
 router.get("/:id", getProductById);
+router.post("/:id/review", protect, addReview);
+
 
 // ADMIN
 router.post("/", protect, isAdmin, upload.single("image"), createProduct);
 router.put("/:id", protect, isAdmin, upload.single("image"), updateProduct);
 router.delete("/:id", protect, isAdmin, deleteProduct);
+
 
 export default router;

@@ -23,7 +23,7 @@ const UserRoutes = () => {
         <Route path="/orders" element={<Orders />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/register" element={<Register />} />
-      <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login />} />
       </Route>
     </Routes>
   );

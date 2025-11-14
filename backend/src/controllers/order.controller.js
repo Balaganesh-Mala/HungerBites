@@ -1,4 +1,5 @@
 import asyncHandler from "express-async-handler";
+import mongoose from "mongoose";
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import Razorpay from "razorpay";
@@ -7,55 +8,97 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-//
-// 💳 Razorpay Setup
-//
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+/**
+ * Helper: load product map for given productIds (single DB call)
+ * returns Map(productId -> productDoc)
+ */
+const loadProductsMap = async (productIds) => {
+  const products = await Product.find({ _id: { $in: productIds } }).lean();
+  const map = new Map();
+  for (const p of products) map.set(String(p._id), p);
+  return map;
+};
+
+/**
+ * Build validated order items:
+ * - ensures every product exists
+ * - ensures stock >= qty
+ * - returns finalOrderItems array and itemsPrice (calculated)
+ */
+const buildFinalOrderItems = async (orderItems) => {
+  const productIds = orderItems.map((it) => it.productId);
+  const productMap = await loadProductsMap(productIds);
+
+  const finalOrderItems = [];
+  let itemsPrice = 0;
+
+  for (const item of orderItems) {
+    const pid = String(item.productId);
+    const product = productMap.get(pid);
+
+    if (!product) {
+      const e = new Error(`Product not found: ${pid}`);
+      e.code = "PRODUCT_NOT_FOUND";
+      throw e;
+    }
+
+    const qty = Number(item.quantity) || 0;
+    if (qty <= 0) {
+      const e = new Error(`Invalid quantity for product ${product.name}`);
+      e.code = "INVALID_QTY";
+      throw e;
+    }
+
+    if (product.stock < qty) {
+      const e = new Error(`Not enough stock for ${product.name}`);
+      e.code = "OUT_OF_STOCK";
+      throw e;
+    }
+
+    const price = Number(product.price || 0);
+    finalOrderItems.push({
+      productId: product._id,
+      name: product.name, // use 'name' field from your Product model
+      quantity: qty,
+      price,
+    });
+
+    itemsPrice += price * qty;
+  }
+
+  return { finalOrderItems, itemsPrice };
+};
+
 //
-// 🛍️ Create New Order (COD or Online)
+// CREATE ORDER (COD or Online). Validates products first.
 //
 export const createOrder = asyncHandler(async (req, res) => {
   const { orderItems, totalPrice, paymentMethod, shippingAddress } = req.body;
 
-  if (!orderItems || orderItems.length === 0) {
+  if (!orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
     res.status(400);
     throw new Error("No items in the order");
   }
 
-  //
-  // 🟩 Build clean orderItems array (fetch product details properly)
-  //
-  const finalOrderItems = await Promise.all(
-    orderItems.map(async (item) => {
-      const product = await Product.findById(item.productId);
-
-      if (!product) {
-        throw new Error("Product not found");
-      }
-
-      if (product.stock < item.quantity) {
-        throw new Error(`${product.title} is out of stock`);
-      }
-
-      return {
-        productId: product._id,     // correctly reference product
-        name: product.title,
-        quantity: item.quantity,
-        price: product.price,
-      };
-    })
+  // Validate products and compute items price (single batch loads)
+  const { finalOrderItems, itemsPrice } = await buildFinalOrderItems(
+    orderItems
   );
 
-  //
-  // 🟧 Razorpay Online Payment
-  //
+  // Optional: you may validate that provided totalPrice matches computed itemsPrice
+  // (but shipping/taxes might differ). I'll not force-check, but you can if needed.
+
+  // If online -> return Razorpay order info (DB order will be created in verifyPayment)
   if (paymentMethod === "online") {
+    const amountPaisa = Math.round((totalPrice || itemsPrice) * 100);
+
     const options = {
-      amount: totalPrice * 100, // ₹ -> paisa
+      amount: amountPaisa,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     };
@@ -70,36 +113,56 @@ export const createOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  //
-  // 🟦 Cash on Delivery (COD)
-  //
-  const order = await Order.create({
-    user: req.user._id,
-    orderItems: finalOrderItems,
-    itemsPrice: totalPrice,
-    totalPrice,
-    paymentMethod: "COD",
-    paymentStatus: "Pending",
-    shippingAddress,
-    orderStatus: "Processing",
-  });
+  // COD -> create order + decrement stock inside a transaction
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
 
-  // Decrease product stock
-  for (const item of finalOrderItems) {
-    await Product.findByIdAndUpdate(item.productId, {
-      $inc: { stock: -item.quantity },
+    const order = await Order.create(
+      [
+        {
+          user: req.user._id,
+          orderItems: finalOrderItems,
+          itemsPrice: totalPrice ?? itemsPrice,
+          totalPrice: totalPrice ?? itemsPrice,
+          paymentMethod: "COD",
+          paymentStatus: "Pending",
+          shippingAddress,
+          orderStatus: "Processing",
+        },
+      ],
+      { session }
+    );
+
+    // Decrement stock using bulk updates
+    const bulkOps = finalOrderItems.map((it) => ({
+      updateOne: {
+        filter: { _id: it.productId },
+        update: { $inc: { stock: -it.quantity } },
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await Product.bulkWrite(bulkOps, { session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json({
+      success: true,
+      message: "Order placed successfully",
+      order: order[0],
     });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
   }
-
-  res.status(201).json({
-    success: true,
-    message: "Order placed successfully",
-    order,
-  });
 });
 
 //
-// ✅ Verify Razorpay Payment
+// VERIFY RAZORPAY PAYMENT -> THEN CREATE ORDER (atomic)
 //
 export const verifyPayment = asyncHandler(async (req, res) => {
   const {
@@ -109,8 +172,13 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     orderData,
   } = req.body;
 
-  const sign = razorpay_order_id + "|" + razorpay_payment_id;
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    res.status(400);
+    throw new Error("Invalid payment verification payload");
+  }
 
+  // verify signature
+  const sign = razorpay_order_id + "|" + razorpay_payment_id;
   const expectedSign = crypto
     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
     .update(sign)
@@ -121,82 +189,98 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     throw new Error("Invalid payment signature");
   }
 
-  //
-  // Build clean order items again for online payment
-  //
-  const finalOrderItems = await Promise.all(
-    orderData.orderItems.map(async (item) => {
-      const product = await Product.findById(item.productId);
-
-      return {
-        productId: product._id,
-        name: product.title,
-        quantity: item.quantity,
-        price: product.price,
-      };
-    })
-  );
-
-  const order = await Order.create({
-    user: req.user._id,
-    orderItems: finalOrderItems,
-    itemsPrice: orderData.totalPrice,
-    totalPrice: orderData.totalPrice,
-    paymentMethod: "online",
-    paymentStatus: "Paid",
-    orderStatus: "Processing",
-    shippingAddress: orderData.shippingAddress,
-    paymentInfo: {
-      id: razorpay_payment_id,
-      status: "Paid",
-      method: "Razorpay",
-    },
-  });
-
-  // Update stock
-  for (const item of finalOrderItems) {
-    await Product.findByIdAndUpdate(item.productId, {
-      $inc: { stock: -item.quantity },
-    });
+  // Validate orderData
+  if (!orderData || !Array.isArray(orderData.orderItems)) {
+    res.status(400);
+    throw new Error("Invalid order data");
   }
 
-  res.status(201).json({
-    success: true,
-    message: "Payment verified & order created",
-    order,
-  });
+  // Build + validate final items (single batch product load)
+  const { finalOrderItems, itemsPrice } = await buildFinalOrderItems(
+    orderData.orderItems
+  );
+
+  // Create DB order and decrement stock atomically
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    const order = await Order.create(
+      [
+        {
+          user: req.user._id,
+          orderItems: finalOrderItems,
+          itemsPrice: orderData.totalPrice ?? itemsPrice,
+          totalPrice: orderData.totalPrice ?? itemsPrice,
+          paymentMethod: "online",
+          paymentStatus: "Paid",
+          orderStatus: "Processing",
+          shippingAddress: orderData.shippingAddress,
+          paymentInfo: {
+            id: razorpay_payment_id,
+            status: "Paid",
+            method: "Razorpay",
+          },
+        },
+      ],
+      { session }
+    );
+
+    // Decrement stock
+    const bulkOps = finalOrderItems.map((it) => ({
+      updateOne: {
+        filter: { _id: it.productId },
+        update: { $inc: { stock: -it.quantity } },
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await Product.bulkWrite(bulkOps, { session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json({
+      success: true,
+      message: "Payment verified & order created",
+      order: order[0],
+    });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
 });
 
 //
-// 📋 Admin: Get All Orders
+// ADMIN: get all orders
 //
 export const getAllOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find()
     .populate("user", "name email")
-    .populate("orderItems.productId", "title price images");
+    .populate("orderItems.productId", "name price images");
 
   res.status(200).json({ success: true, orders });
 });
 
 //
-// 👤 User: Get My Orders
+// USER: get my orders
 //
 export const getUserOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({ user: req.user._id })
-    .populate({
-      path: "orderItems.productId",
-      select: "title price images flavor",
-    });
+  const orders = await Order.find({ user: req.user._id }).populate({
+    path: "orderItems.productId",
+    select: "name price images flavor",
+  });
 
   res.status(200).json({ success: true, orders });
 });
 
 //
-// ✏️ Update Order Status (Admin)
+// ADMIN: update order status
 //
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
-
   const order = await Order.findById(req.params.id);
   if (!order) {
     res.status(404);
@@ -204,36 +288,24 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   }
 
   order.orderStatus = status;
-
   if (status === "Delivered") {
     order.paymentStatus = "Paid";
     order.deliveredAt = new Date();
   }
 
   await order.save();
-
-  res.status(200).json({
-    success: true,
-    message: "Order updated",
-    order,
-  });
+  res.status(200).json({ success: true, message: "Order updated", order });
 });
 
 //
-// ❌ Delete Order
+// DELETE order
 //
 export const deleteOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
-
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
   }
-
   await order.deleteOne();
-
-  res.status(200).json({
-    success: true,
-    message: "Order deleted",
-  });
+  res.status(200).json({ success: true, message: "Order deleted" });
 });

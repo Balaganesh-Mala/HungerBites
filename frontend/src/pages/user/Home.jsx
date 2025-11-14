@@ -16,21 +16,21 @@ const Home = () => {
     {
       id: 1,
       image:
-        "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=1500&q=80",
+        "https://ik.imagekit.io/izqq5ffwt/Programming%20With%20(2).png",
       title: "Fresh & Healthy Snacks",
       subtitle: "Delivered at your doorstep – Taste the freshness!",
     },
     {
       id: 2,
       image:
-        "https://ik.imagekit.io/izqq5ffwt/bowl-gourmet-organic-fresh-nuts-generated-by-ai.jpg",
-      title: "Premium Dry Fruits",
+        "https://ik.imagekit.io/izqq5ffwt/Programming%20With%20(2).png",
+      title: "Premium Special Snacks",
       subtitle: "Crunchy, tasty & 100% natural.",
     },
     {
       id: 3,
       image:
-        "https://ik.imagekit.io/izqq5ffwt/Screenshot%202025-11-13%20175802.png",
+        "https://ik.imagekit.io/izqq5ffwt/Programming%20With%20(1).png",
       title: "Makhana Specials",
       subtitle: "Healthy & delicious flavors for everyone.",
     },

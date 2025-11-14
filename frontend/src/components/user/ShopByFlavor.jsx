@@ -49,7 +49,7 @@ const ShopByFlavor = () => {
               {flavor[0]}
             </div>
 
-            <p className="font-medium text-gray-800 group-hover:text-orange-600">
+            <p className="font-medium text-gray-800 group-hover:text-orange-600 text-center">
               {flavor}
             </p>
           </Link>

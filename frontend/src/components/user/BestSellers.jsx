@@ -6,10 +6,9 @@ const BestSellers = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch best sellers
   const loadBestSellers = async () => {
     try {
-      const res = await api.get("/products?bestSeller=true&limit=8");
+      const res = await api.get("/products?bestseller=true&limit=8");
       setProducts(res.data.products || []);
     } catch (error) {
       console.error("Best Sellers Error:", error);

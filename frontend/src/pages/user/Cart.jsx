@@ -6,179 +6,173 @@ const Cart = () => {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch cart from API
   const loadCart = async () => {
     try {
       const res = await api.get("/cart");
-      setCart(res.data.cart.items || []);
-      console.log("Cart data:", res.data);
+      const items = res.data.cart?.items || [];
+      console.log("cart data:", res.data);
+
+      // Ensure every item has a fallback productId even if product is deleted
+      const fixedItems = items.map((item) => ({
+        ...item,
+        productIdFallback: item.product?._id || item.product, // product may be null OR ObjectId
+      }));
+
+      setCart(fixedItems);
     } catch (err) {
-      console.log("Cart error:", err);
+      console.log("Cart load error:", err);
     }
     setLoading(false);
   };
 
-  // Update quantity
-  const updateQty = async (productId, qty) => {
+  const updateQty = async (item, qty) => {
     if (qty < 1) return;
 
+    const productId = item.product?._id;
+    if (!productId) return; // Do not allow qty update for deleted products
+
     try {
-      await api.put("/cart/update", { productId, quantity: qty });
+      await api.put("/cart/update", {
+        productId,
+        quantity: qty,
+      });
       loadCart();
     } catch (err) {
-      console.log("Qty update error:", err);
+      console.log("Qty update failed:", err);
     }
   };
 
-  // Remove item
-  const removeItem = async (productId) => {
-  try {
-    await api.delete("/cart/remove", {
-      data: { productId },
-    });
-    loadCart();
-  } catch (err) {
-    console.log("Remove error:", err);
-  }
-};
+  const removeItem = async (item) => {
+    try {
+      await api.delete("/cart/remove", {
+        data: { productId: item.productIdFallback },
+      });
+
+      loadCart();
+    } catch (err) {
+      console.log("Remove failed:", err);
+    }
+  };
 
   useEffect(() => {
     loadCart();
   }, []);
 
-  if (loading)
-    return <p className="text-center text-gray-500 py-20">Loading...</p>;
+  if (loading) return <p className="py-20 text-center">Loading...</p>;
 
-  const totalAmount = cart.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const totalAmount = cart.reduce((sum, item) => {
+    const price = item.product?.price ?? item.price ?? 0;
+    return sum + price * item.quantity;
+  }, 0);
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
 
-      {/* HEADER */}
       <div className="max-w-5xl mx-auto px-6 py-8 flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-slate-900">Your Cart</h1>
-        <Link to="/products" className="text-orange-600 font-medium">
-          Continue Shopping →
-        </Link>
+        <h1 className="text-2xl font-semibold">Your Cart</h1>
+        <Link to="/products" className="text-orange-600">Continue Shopping →</Link>
       </div>
 
-      {/* EMPTY CART */}
       {cart.length === 0 && (
         <div className="text-center mt-20">
-          <img
-            src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png"
-            alt="Empty Cart"
-            className="w-40 mx-auto opacity-80"
-          />
-          <h2 className="text-xl font-semibold text-slate-700 mt-4">
-            Your cart is empty
-          </h2>
-          <Link
-            to="/products"
-            className="mt-6 inline-block bg-orange-600 text-white px-6 py-3 rounded-lg"
-          >
+          <img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" className="w-40 mx-auto" />
+          <h2 className="text-xl mt-4">Your cart is empty</h2>
+          <Link to="/products" className="bg-orange-600 text-white px-6 py-3 rounded-lg mt-6 inline-block">
             Browse Products
           </Link>
         </div>
       )}
 
-      {/* CART LIST */}
       {cart.length > 0 && (
         <div className="max-w-5xl mx-auto px-6 grid md:grid-cols-3 gap-8">
 
-          {/* LEFT SIDE – ITEMS */}
           <div className="md:col-span-2 space-y-6">
-            {cart.map((item) => (
-              <div
-                key={item.product._id}
-                className="bg-white p-4 rounded-xl shadow flex gap-4"
-              >
-                {/* Product Image */}
-                <img
-                  src={item.product.images[0].url}
-                  alt={item.product.name}
-                  className="w-28 h-28 rounded-lg object-cover"
-                />
 
-                {/* Info */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{item.product.name}</h3>
-                  <p className="text-slate-500 text-sm">
-                    {item.product.flavor || item.product.category?.name}
-                  </p>
+            {cart.map((item) => {
+              const product = item.product;
+              const price = product?.price ?? item.price ?? 0;
 
-                  {/* Price */}
-                  <p className="mt-1 text-orange-600 font-bold">
-                    ₹{item.product.price}
-                  </p>
+              return (
+                <div key={item._id} className="bg-white p-4 rounded-xl shadow flex gap-4">
 
-                  {/* Quantity Controls */}
-                  <div className="flex items-center gap-3 mt-3">
-                    <button
-                      onClick={() =>
-                        updateQty(item.product._id, item.quantity - 1)
-                      }
-                      className="px-3 py-1 border rounded-lg"
-                    >
-                      -
-                    </button>
+                  <img
+                    src={product?.images?.[0]?.url || "https://via.placeholder.com/100"}
+                    className="w-28 h-28 object-cover rounded-lg"
+                  />
 
-                    <span className="font-medium">{item.quantity}</span>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg">
+                      {product?.name || "Product removed"}
+                    </h3>
 
-                    <button
-                      onClick={() =>
-                        updateQty(item.product._id, item.quantity + 1)
-                      }
-                      className="px-3 py-1 border rounded-lg"
-                    >
-                      +
-                    </button>
+                    <p className="text-orange-600 font-bold mt-1">₹{price}</p>
+
+                    {product ? (
+                      <div className="flex items-center gap-3 mt-3">
+                        <button
+                          className="border px-3 py-1 rounded"
+                          onClick={() => updateQty(item, item.quantity - 1)}
+                        >
+                          -
+                        </button>
+
+                        <span>{item.quantity}</span>
+
+                        <button
+                          className="border px-3 py-1 rounded"
+                          onClick={() => updateQty(item, item.quantity + 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-red-500 text-sm mt-2">
+                        This item is no longer available.
+                      </p>
+                    )}
                   </div>
-                </div>
 
-                {/* Remove */}
-                <button
-                  className="text-red-500 font-medium"
-                  onClick={() => removeItem(item.product._id)}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+                  <button
+                    onClick={() => removeItem(item)}
+                    className="text-red-500 font-medium"
+                  >
+                    ✕
+                  </button>
+
+                </div>
+              );
+            })}
+
           </div>
 
-          {/* RIGHT SIDE – SUMMARY */}
           <div className="bg-white p-6 rounded-xl shadow h-fit">
-            <h3 className="text-xl font-semibold mb-4">Order Summary</h3>
+            <h3 className="text-xl font-semibold">Order Summary</h3>
 
-            <div className="flex justify-between text-slate-700 mb-2">
+            <div className="flex justify-between mt-3">
               <span>Subtotal</span>
               <span>₹{totalAmount}</span>
             </div>
 
-            <div className="flex justify-between text-slate-700 mb-2">
+            <div className="flex justify-between mt-3">
               <span>Delivery</span>
               <span className="text-green-600">Free</span>
             </div>
 
-            <div className="h-[1px] bg-gray-200 my-3"></div>
+            <div className="border-t my-4"></div>
 
-            <div className="flex justify-between font-bold text-lg text-slate-900">
+            <div className="flex justify-between font-bold text-lg">
               <span>Total</span>
               <span>₹{totalAmount}</span>
             </div>
 
-            {/* Checkout Button */}
             <Link
               to="/checkout"
-              className="block text-center mt-6 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-xl font-semibold"
+              className="block mt-6 text-center bg-orange-600 text-white py-3 rounded-lg"
             >
               Proceed to Checkout
             </Link>
           </div>
+
         </div>
       )}
     </div>

@@ -174,7 +174,7 @@ const OrderDetails = () => {
             />
 
             <div className="flex-1">
-              <p className="font-medium">{item.name}</p>
+              <p className="font-medium">{item.productId?.name || item.name}</p>
               <p className="text-sm text-slate-500">Qty: {item.quantity}</p>
             </div>
 

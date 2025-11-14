@@ -65,8 +65,11 @@ export const createProduct = asyncHandler(async (req, res) => {
 //
 // 📦 GET ALL PRODUCTS
 //
+//
+// 📦 GET ALL PRODUCTS — WITH FILTERS (PRICE + FLAVOR)
+//
 export const getAllProducts = asyncHandler(async (req, res) => {
-  const { search, category, featured, bestseller } = req.query;
+  const { search, category, featured, bestseller, flavor, sort } = req.query;
 
   let query = {};
 
@@ -75,15 +78,33 @@ export const getAllProducts = asyncHandler(async (req, res) => {
   if (featured) query.isFeatured = featured === "true";
   if (bestseller) query.isBestSeller = bestseller === "true";
 
-  const products = await Product.find(query)
-    .populate("category", "name")
-    .sort({ createdAt: -1 });
+  // ⭐ Flavor filter
+  if (flavor) query.flavor = { $regex: flavor, $options: "i" };
+
+  // Build base query
+  let dbQuery = Product.find(query).populate("category", "name");
+
+  // ⭐ Sorting (price low-high / high-low)
+  if (sort === "low-high") {
+    dbQuery = dbQuery.sort({ price: 1 }); // ascending
+  }
+  if (sort === "high-low") {
+    dbQuery = dbQuery.sort({ price: -1 }); // descending
+  }
+
+  // Default sorting by latest
+  if (!sort) {
+    dbQuery = dbQuery.sort({ createdAt: -1 });
+  }
+
+  const products = await dbQuery;
 
   res.status(200).json({
     success: true,
     products,
   });
 });
+
 
 //
 // 🔍 GET PRODUCT BY ID
@@ -174,3 +195,62 @@ export const deleteProduct = asyncHandler(async (req, res) => {
     message: "Product deleted",
   });
 });
+
+
+export const addReview = asyncHandler(async (req, res) => {
+  const { rating, comment } = req.body;
+  const productId = req.params.id;
+
+  const product = await Product.findById(productId);
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  // Check if user already reviewed
+  const alreadyReviewed = product.reviews.find(
+    (r) => r.user.toString() === req.user._id.toString()
+  );
+
+  if (alreadyReviewed) {
+    res.status(400);
+    throw new Error("You already reviewed this product");
+  }
+
+  // Check if user purchased and delivered
+  const deliveredOrder = await Order.findOne({
+    user: req.user._id,
+    "orderItems.productId": productId,
+    orderStatus: "Delivered",
+  });
+
+  if (!deliveredOrder) {
+    res.status(400);
+    throw new Error("You can review only after the product is delivered");
+  }
+
+  const review = {
+    user: req.user._id,
+    name: req.user.name,
+    rating: Number(rating),
+    comment,
+    createdAt: new Date(),
+  };
+
+  product.reviews.push(review);
+
+  // Update rating
+  product.numOfReviews = product.reviews.length;
+  product.ratings =
+    product.reviews.reduce((acc, item) => acc + item.rating, 0) /
+    product.reviews.length;
+
+  await product.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Review added",
+    reviews: product.reviews,
+  });
+});
+

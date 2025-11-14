@@ -8,7 +8,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const buyNowData = location.state; // ← detects Buy Now checkout
+  const buyNowData = location.state;
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,15 +24,15 @@ const Checkout = () => {
 
   const [paymentMethod, setPaymentMethod] = useState("COD");
 
-  // 📌 Load items (Buy Now OR Full Cart)
+  // 📌 Load items (Buy Now or Full Cart)
   useEffect(() => {
     if (buyNowData?.buyNow) {
-      // Buy Now mode — use single product
+      // Buy Now Logic
       setCartItems([
         {
           product: {
             _id: buyNowData.product._id,
-            title: buyNowData.product.title,
+            name: buyNowData.product.title,
             price: buyNowData.product.price,
             images: [{ url: buyNowData.product.image }],
           },
@@ -41,7 +41,7 @@ const Checkout = () => {
       ]);
       setLoading(false);
     } else {
-      // Normal cart checkout
+      // Cart Checkout
       loadCart();
     }
   }, []);
@@ -56,19 +56,22 @@ const Checkout = () => {
     setLoading(false);
   };
 
-  // CART TOTALS
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  // SAFE subtotal calculation
+  const subtotal = cartItems.reduce((sum, item) => {
+    const price = item?.product?.price ?? item?.price ?? 0;
+    return sum + price * (item.quantity || 0);
+  }, 0);
 
-  // 🔹 Create final order data for backend
+  // 🔹 Final order data
   const buildOrderData = () => ({
     orderItems: cartItems.map((item) => ({
-      productId: item.product._id,
-      name: item.product.title,
+      productId: item.product?._id,
+      name:
+        item.product?.title ||
+        item.product?.name ||
+        "Unknown Product",
       quantity: item.quantity,
-      price: item.product.price,
+      price: item?.product?.price ?? item?.price ?? 0,
     })),
     shippingAddress: address,
     totalPrice: subtotal,
@@ -81,18 +84,22 @@ const Checkout = () => {
       const res = await api.post("/orders", buildOrderData());
 
       if (!buyNowData?.buyNow) {
-        await clearCartApi(); // clear only if checkout from cart
+        await clearCartApi();
       }
 
       Swal.fire("Order Placed!", "Your COD order was successful.", "success");
 
       navigate("/orders");
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Failed to place order", "error");
+      Swal.fire(
+        "Error",
+        err.response?.data?.message || "Failed to place order",
+        "error"
+      );
     }
   };
 
-  // 🟧 Online Payment
+  // Load Razorpay script
   const loadRazorpay = (src) =>
     new Promise((resolve) => {
       const s = document.createElement("script");
@@ -102,17 +109,18 @@ const Checkout = () => {
       document.body.appendChild(s);
     });
 
+  // 🟧 Online Payment
   const placeOnlineOrder = async () => {
     const orderData = buildOrderData();
 
-    const rzpLoaded = await loadRazorpay("https://checkout.razorpay.com/v1/checkout.js");
-    if (!rzpLoaded) {
+    const loaded = await loadRazorpay(
+      "https://checkout.razorpay.com/v1/checkout.js"
+    );
+    if (!loaded) {
       return Swal.fire("Error", "Failed to load Razorpay SDK", "error");
     }
 
-    // Create Razorpay Order
     const res = await api.post("/orders", orderData);
-
     const { razorpayOrderId, amount } = res.data;
 
     const options = {
@@ -156,7 +164,11 @@ const Checkout = () => {
 
   const handlePlaceOrder = () => {
     if (!address.name || !address.phone || !address.city || !address.pincode) {
-      return Swal.fire("Incomplete Address", "Please fill all fields.", "warning");
+      return Swal.fire(
+        "Incomplete Address",
+        "Please fill all required fields.",
+        "warning"
+      );
     }
 
     if (paymentMethod === "COD") placeCODOrder();
@@ -170,7 +182,6 @@ const Checkout = () => {
       <h1 className="text-3xl font-semibold mb-6">Checkout</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-        
         {/* ADDRESS */}
         <div className="md:col-span-2 bg-white p-6 rounded-xl shadow">
           <h2 className="text-xl font-semibold mb-4">Shipping Address</h2>
@@ -191,6 +202,7 @@ const Checkout = () => {
           </div>
 
           <h2 className="text-xl font-semibold mt-6">Payment Method</h2>
+
           <div className="flex gap-4 mt-3">
             <label className="flex items-center gap-2">
               <input
@@ -228,7 +240,7 @@ const Checkout = () => {
             <span className="text-green-600">FREE</span>
           </div>
 
-          <div className="border-t my-3" />
+          <div className="border-t my-3"></div>
 
           <div className="flex justify-between font-bold text-lg">
             <span>Total</span>
@@ -242,7 +254,6 @@ const Checkout = () => {
             Place Order
           </button>
         </div>
-
       </div>
     </div>
   );

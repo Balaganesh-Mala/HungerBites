@@ -3,6 +3,16 @@ import Cart from "../models/cart.model.js";
 import Product from "../models/product.model.js";
 
 //
+// ⭐ SUPER FAST subtotal using stored price
+//
+const calculateSubtotal = (items) => {
+  return items.reduce((sum, item) => {
+    if (!item || !item.price || !item.quantity) return sum;
+    return sum + item.price * item.quantity;
+  }, 0);
+};
+
+//
 // 🛒 Add item to cart
 //
 export const addToCart = asyncHandler(async (req, res) => {
@@ -26,12 +36,12 @@ export const addToCart = asyncHandler(async (req, res) => {
 
   let cart = await Cart.findOne({ user: req.user._id });
 
-  // 🧺 If no cart exists, create new one
+  // If no cart exists → create one
   if (!cart) {
     cart = new Cart({ user: req.user._id, items: [] });
   }
 
-  // Check if product already exists in cart
+  // Check if already in cart
   const existingItem = cart.items.find(
     (item) => item.product.toString() === productId
   );
@@ -42,13 +52,11 @@ export const addToCart = asyncHandler(async (req, res) => {
     cart.items.push({
       product: productId,
       quantity,
-      price: product.price,
+      price: product.price, // Store price permanently
     });
   }
 
-  // Auto-calculate subtotal
-  cart.subtotal = await calculateSubtotal(cart.items);
-
+  cart.subtotal = calculateSubtotal(cart.items);
   await cart.save();
 
   res.status(200).json({
@@ -59,10 +67,10 @@ export const addToCart = asyncHandler(async (req, res) => {
 });
 
 //
-// 📋 Get user cart
+// 📋 Get user cart (AUTO CLEANING)
 //
 export const getUserCart = asyncHandler(async (req, res) => {
-  const cart = await Cart.findOne({ user: req.user._id }).populate(
+  let cart = await Cart.findOne({ user: req.user._id }).populate(
     "items.product",
     "name price images stock"
   );
@@ -70,16 +78,24 @@ export const getUserCart = asyncHandler(async (req, res) => {
   if (!cart) {
     return res.status(200).json({
       success: true,
-      message: "Cart is empty",
       cart: { items: [], subtotal: 0 },
     });
+  }
+
+  // 🧹 Remove items whose product has been deleted
+  const validItems = cart.items.filter((item) => item.product !== null);
+
+  if (validItems.length !== cart.items.length) {
+    cart.items = validItems;
+    cart.subtotal = calculateSubtotal(validItems);
+    await cart.save();
   }
 
   res.status(200).json({ success: true, cart });
 });
 
 //
-// ✏️ Update item quantity
+// ✏️ Update cart item quantity
 //
 export const updateCartItem = asyncHandler(async (req, res) => {
   const { productId, quantity } = req.body;
@@ -102,14 +118,14 @@ export const updateCartItem = asyncHandler(async (req, res) => {
     item.quantity = quantity;
   }
 
-  cart.subtotal = await calculateSubtotal(cart.items);
+  cart.subtotal = calculateSubtotal(cart.items);
   await cart.save();
 
   res.status(200).json({ success: true, message: "Cart updated", cart });
 });
 
 //
-// ❌ Remove item from cart
+// ❌ Remove item
 //
 export const removeFromCart = asyncHandler(async (req, res) => {
   const { productId } = req.body;
@@ -123,8 +139,8 @@ export const removeFromCart = asyncHandler(async (req, res) => {
   cart.items = cart.items.filter(
     (item) => item.product.toString() !== productId
   );
-  cart.subtotal = await calculateSubtotal(cart.items);
 
+  cart.subtotal = calculateSubtotal(cart.items);
   await cart.save();
 
   res.status(200).json({
@@ -155,17 +171,3 @@ export const clearCart = asyncHandler(async (req, res) => {
     cart,
   });
 });
-
-//
-// 🔢 Helper function to calculate subtotal
-//
-const calculateSubtotal = async (items) => {
-  let subtotal = 0;
-  for (const item of items) {
-    const product = await Product.findById(item.product);
-    if (product) {
-      subtotal += product.price * item.quantity;
-    }
-  }
-  return subtotal;
-};
