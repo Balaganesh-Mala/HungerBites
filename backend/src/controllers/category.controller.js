@@ -16,7 +16,7 @@ export const createCategory = asyncHandler(async (req, res) => {
   let imageData = {};
 
   if (req.file) {
-    const result = await uploadToCloudinary(req.file.path);
+    const result = await uploadToCloudinary(req.file.buffer, "categories");
     imageData = {
       public_id: result.public_id,
       url: result.secure_url,
@@ -77,7 +77,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
   let imageData = category.image;
 
   if (req.file) {
-    const result = await uploadToCloudinary(req.file.path);
+    const result = await uploadToCloudinary(req.file.buffer, "categories");
     imageData = {
       public_id: result.public_id,
       url: result.secure_url,

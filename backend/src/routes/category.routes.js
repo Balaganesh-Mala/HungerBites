@@ -11,13 +11,12 @@ import {
 
 const router = express.Router();
 
-// CREATE CATEGORY (with image)
+
 router.post("/", upload.single("image"), createCategory);
 
-// GET ALL CATEGORIES
 router.get("/", getCategories);
 
-// UPDATE CATEGORY (optional new image)
+
 router.put("/:id", upload.single("image"), updateCategory);
 
 // DELETE CATEGORY

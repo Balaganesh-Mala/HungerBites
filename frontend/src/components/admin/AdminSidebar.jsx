@@ -7,6 +7,8 @@ import {
   FiSettings,
   FiTrendingUp,
 } from "react-icons/fi";
+import { TbCategory2 } from "react-icons/tb";
+
 
 const AdminSidebar = ({ open, setOpen }) => {
   const location = useLocation();
@@ -15,6 +17,7 @@ const AdminSidebar = ({ open, setOpen }) => {
     { name: "Dashboard", path: "/admin/dashboard", icon: <FiHome /> },
     { name: "Products", path: "/admin/products", icon: <FiBox /> },
     { name: "Orders", path: "/admin/orders", icon: <FiShoppingBag /> },
+    { name: "Categories", path: "/admin/categories", icon: <TbCategory2 /> },
     { name: "Users", path: "/admin/users", icon: <FiUsers /> },
     { name: "Payments", path: "/admin/payments", icon: <FiTrendingUp /> },
     { name: "Settings", path: "/admin/settings", icon: <FiSettings /> },
