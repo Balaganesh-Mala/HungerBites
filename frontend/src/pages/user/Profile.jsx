@@ -27,22 +27,37 @@ const Profile = () => {
 
   // Load profile data
   const loadProfile = async () => {
-    try {
-      const res = await getMyProfileApi();
-      const u = res.data.user;
+  try {
+    const res = await getMyProfileApi();
+    const u = res.data.user;
 
-      setUser(u);
-      setProfile({ name: u.name, phone: u.phone || "" });
+    setUser(u);
+    setProfile({ name: u.name, phone: u.phone || "" });
 
-      if (u.addresses?.length > 0) {
-        setAddress({ ...u.addresses[0] });
-      }
-    } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Failed to load profile", "error");
+    if (u.addresses?.length > 0) {
+      setAddress({ ...u.addresses[0] });
     }
-    setLoading(false);
-  };
+  } catch (err) {
+    // If user not logged in → show "Please login first"
+    if (err?.response?.status === 401) {
+      Swal.fire({
+        icon: "warning",
+        title: "Please Login First",
+        text: "You must be logged in to view your profile.",
+        confirmButtonText: "Login",
+      }).then(() => {
+        window.location.href = "/login"; // redirect
+      });
+      return;
+    }
+
+    // Other backend errors
+    Swal.fire("Error", "Failed to load profile", "error");
+  }
+
+  setLoading(false);
+};
+
 
   useEffect(() => {
     loadProfile();

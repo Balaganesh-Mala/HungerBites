@@ -58,14 +58,24 @@ const Orders = () => {
 
   // Load orders
   const loadOrders = async () => {
-    try {
-      const res = await getMyOrdersApi();
-      setOrders(res.data.orders || []);
-    } catch (err) {
-      Swal.fire("Error", "Failed to load orders", "error");
+  try {
+    const res = await getMyOrdersApi();
+    setOrders(res.data.orders || []);
+  } catch (err) {
+    // If user is not logged in → do NOT show alert
+    if (err?.response?.status === 401) {
+      setOrders([]);   // treat as no orders
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  };
+
+    // Other errors → show alert
+    Swal.fire("Error", "Failed to load orders", "error");
+  }
+
+  setLoading(false);
+};
+
 
   useEffect(() => {
     loadOrders();
