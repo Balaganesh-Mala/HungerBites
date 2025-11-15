@@ -2,16 +2,11 @@ import asyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
-import Razorpay from "razorpay";
+import { razorpay } from "../config/razorpay.js";   // ✅ use shared instance
 import crypto from "crypto";
 import dotenv from "dotenv";
 
 dotenv.config();
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 /**
  * Helper: load product map for given productIds (single DB call)
@@ -63,7 +58,7 @@ const buildFinalOrderItems = async (orderItems) => {
     const price = Number(product.price || 0);
     finalOrderItems.push({
       productId: product._id,
-      name: product.name, // use 'name' field from your Product model
+      name: product.name,
       quantity: qty,
       price,
     });
@@ -85,24 +80,18 @@ export const createOrder = asyncHandler(async (req, res) => {
     throw new Error("No items in the order");
   }
 
-  // Validate products and compute items price (single batch loads)
-  const { finalOrderItems, itemsPrice } = await buildFinalOrderItems(
-    orderItems
-  );
+  // Validate products and compute price
+  const { finalOrderItems, itemsPrice } = await buildFinalOrderItems(orderItems);
 
-  // Optional: you may validate that provided totalPrice matches computed itemsPrice
-  // (but shipping/taxes might differ). I'll not force-check, but you can if needed.
-
-  // If online -> return Razorpay order info (DB order will be created in verifyPayment)
+  // ONLINE PAYMENT → create Razorpay order
   if (paymentMethod === "online") {
-    const amountPaisa = Math.round((totalPrice || itemsPrice) * 100);
-
     const options = {
-      amount: amountPaisa,
+      amount: totalPrice * 100,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     };
 
+    // ✅ using shared Razorpay instance (fixed)
     const razorpayOrder = await razorpay.orders.create(options);
 
     return res.status(200).json({
@@ -113,7 +102,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  // COD -> create order + decrement stock inside a transaction
+  // COD → create order + decrease stock
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -134,7 +123,6 @@ export const createOrder = asyncHandler(async (req, res) => {
       { session }
     );
 
-    // Decrement stock using bulk updates
     const bulkOps = finalOrderItems.map((it) => ({
       updateOne: {
         filter: { _id: it.productId },
@@ -162,7 +150,7 @@ export const createOrder = asyncHandler(async (req, res) => {
 });
 
 //
-// VERIFY RAZORPAY PAYMENT -> THEN CREATE ORDER (atomic)
+// VERIFY PAYMENT → ONLY after success from Razorpay
 //
 export const verifyPayment = asyncHandler(async (req, res) => {
   const {
@@ -195,12 +183,10 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     throw new Error("Invalid order data");
   }
 
-  // Build + validate final items (single batch product load)
   const { finalOrderItems, itemsPrice } = await buildFinalOrderItems(
     orderData.orderItems
   );
 
-  // Create DB order and decrement stock atomically
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -226,7 +212,6 @@ export const verifyPayment = asyncHandler(async (req, res) => {
       { session }
     );
 
-    // Decrement stock
     const bulkOps = finalOrderItems.map((it) => ({
       updateOne: {
         filter: { _id: it.productId },
@@ -281,6 +266,7 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 //
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
+
   const order = await Order.findById(req.params.id);
   if (!order) {
     res.status(404);
@@ -288,6 +274,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   }
 
   order.orderStatus = status;
+
   if (status === "Delivered") {
     order.paymentStatus = "Paid";
     order.deliveredAt = new Date();

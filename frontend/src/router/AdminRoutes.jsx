@@ -7,8 +7,7 @@ import AdminLayout from "../layouts/AdminLayout.jsx";
 
 import DashboardHome from "../pages/admin/DashboardHome.jsx";
 import Products from "../pages/admin/Products.jsx";
-import AddProduct from "../pages/admin/AddProduct.jsx";
-import EditProduct from "../pages/admin/EditProduct.jsx";
+
 import Orders from "../pages/admin/Orders.jsx";
 import OrderDetails from "../pages/admin/OrderDetails.jsx";
 import Users from "../pages/admin/Users.jsx";
@@ -37,8 +36,6 @@ const AdminRoutes = () => {
           <Route index element={<DashboardHome />} />
           <Route path="dashboard" element={<DashboardHome />} />
           <Route path="products" element={<Products />} />
-          <Route path="products/add" element={<AddProduct />} />
-          <Route path="products/edit/:id" element={<EditProduct />} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/:id" element={<OrderDetails />} />
           <Route path="users" element={<Users />} />

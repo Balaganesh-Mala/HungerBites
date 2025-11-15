@@ -1,33 +1,45 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { FiBell, FiMenu } from "react-icons/fi";
 import { AdminAuthContext } from "../../context/AdminAuthContext";
 import websiteLogo from "../../assets/images/HungerBitesLogo.png";
+import { getPublicSettings } from "../../api/settings.api";
 
 const AdminNavbar = ({ toggleSidebar }) => {
   const { admin, logout } = useContext(AdminAuthContext);
+  const [logo, setLogo] = useState(null);
 
   const [openProfile, setOpenProfile] = useState(false);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await getPublicSettings();
+        const logoUrl = res.data.settings?.logo?.[0]?.url;
+        setLogo(logoUrl);
+      } catch (err) {
+        console.log("Settings Load Error:", err);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-white shadow z-40 h-16 flex items-center px-4 md:ml-64">
       {/* MOBILE MENU BUTTON */}
-      <button
-        className="md:hidden mr-4"
-        onClick={toggleSidebar}
-      >
+      <button className="md:hidden mr-4" onClick={toggleSidebar}>
         <FiMenu size={26} />
       </button>
 
       {/* LOGO */}
       <div className="flex items-center">
-        <img src={websiteLogo} alt="Admin Logo" className="h-10" />
+        <img src={logo} alt="Admin Logo" className="h-10" />
       </div>
 
       <div className="flex-1"></div>
 
       {/* RIGHT SIDE ICONS */}
       <div className="flex items-center gap-6">
-
         {/* NOTIFICATIONS */}
         <button className="relative hover:text-orange-600 transition">
           <FiBell size={22} />

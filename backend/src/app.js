@@ -9,6 +9,7 @@ import adminRoutes from "./routes/admin.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import orderRoutes from "./routes/order.routes.js"; // 🆕 Add order routes
@@ -32,10 +33,11 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // ✅ Health check route (optional but useful)
 app.get("/", (req, res) => {
-  res.send("✅ Hunger Bites API is running...");
+  res.send("Hunger Bites API is running...");
 });
 
 // ✅ Error Handler (Always last)

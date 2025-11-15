@@ -7,7 +7,7 @@ import {
   getAllPayments,
 } from "../controllers/payment.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
-import { adminOnly } from "../middleware/admin.middleware.js";
+import { isAdmin } from "../middleware/admin.middleware.js";
 
 const router = express.Router();
 
@@ -18,6 +18,6 @@ router.post("/failed", protect, recordFailedPayment);
 router.get("/my-payments", protect, getUserPayments);
 
 // Admin routes
-router.get("/", protect, adminOnly, getAllPayments);
+router.get("/", protect, isAdmin, getAllPayments);
 
 export default router;

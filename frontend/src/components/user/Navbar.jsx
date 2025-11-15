@@ -1,16 +1,32 @@
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiMenu, FiX, FiShoppingCart, FiUser } from "react-icons/fi";
-import websiteLogo from "../../assets/images/HungerBitesLogo.png";
 import useCartCount from "../../hooks/useCartCount";
+import { getPublicSettings } from "../../api/settings.api";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [logo, setLogo] = useState(null);
   const cartCount = useCartCount();
-  const location = useLocation(); // 👉 Detect current route
+  const location = useLocation(); //  Detect current route
 
   // Function to check active tab
   const isActive = (path) => location.pathname === path;
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await getPublicSettings();
+        const logoUrl = res.data.settings?.logo?.[0]?.url;
+        console.log("Loaded Logo URL:", res.data);
+        setLogo(logoUrl);
+      } catch (err) {
+        console.log("Settings Load Error:", err);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
@@ -18,7 +34,7 @@ const Navbar = () => {
 
         {/* Logo */}
         <Link to="/" className="text-2xl font-semibold text-gray-900">
-          <img src={websiteLogo} alt="Hunger Bites Logo" className="h-10" />
+          <img src={logo} alt="Hunger Bites Logo" className="h-10" />
         </Link>
 
         {/* Desktop Menu */}

@@ -212,7 +212,7 @@ const Products = () => {
       </div>
 
       {/* Product Table */}
-      <div className="overflow-x-auto bg-white shadow rounded-xl p-4">
+      <div className="overflow-x-auto bg-white shadow rounded-xl p-4 ">
         <table className="w-full">
           <thead>
             <tr className="border-b text-left">
@@ -273,7 +273,7 @@ const Products = () => {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl w-full max-w-xl shadow-xl">
             <h2 className="text-xl font-semibold mb-4">
               {editMode ? "Edit Product" : "Add Product"}

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import adminApi from "../../api/adminAxios";
 import Swal from "sweetalert2";
+import { getPublicSettings } from "../../api/settings.api";
 
 const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logo, setLogo] = useState(null);
 
   const [form, setForm] = useState({
     storeName: "",
@@ -30,29 +32,41 @@ const Settings = () => {
   };
 
   useEffect(() => {
+    const loadSetting = async () => {
+      try {
+        const res = await getPublicSettings();
+        const logoUrl = res.data.settings?.logo?.[0]?.url;
+        setLogo(logoUrl);
+      } catch (err) {
+        console.log("Settings Load Error:", err);
+      }
+    };
+
+    loadSetting();
     loadSettings();
   }, []);
 
   // Upload Logo
   const handleLogoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
 
-    const body = new FormData();
-    body.append("file", file);
+  const body = new FormData();
+  body.append("logo", file);   // ✅ FIXED
 
-    try {
-      const res = await adminApi.post("/upload", body, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+  try {
+    const res = await adminApi.put("/settings", body, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
 
-      setForm({ ...form, logo: res.data.url });
+    setForm({ ...form, logo: res.data.settings.logo[0].url });
 
-      Swal.fire("Uploaded!", "Logo updated successfully", "success");
-    } catch (error) {
-      Swal.fire("Error", "Failed to upload logo", "error");
-    }
-  };
+    Swal.fire("Uploaded!", "Logo updated successfully", "success");
+  } catch (error) {
+    Swal.fire("Error", "Failed to upload logo", "error");
+  }
+};
+
 
   const saveSettings = async () => {
     setSaving(true);
@@ -123,7 +137,7 @@ const Settings = () => {
           <div className="flex items-center gap-4 mb-4">
             {form.logo ? (
               <img
-                src={form.logo}
+                src={logo || form.logo  }
                 alt="Logo"
                 className="h-16 w-16 object-cover rounded-lg border"
               />
