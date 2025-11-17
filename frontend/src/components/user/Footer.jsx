@@ -43,6 +43,7 @@ const Footer = () => {
           <li>FAQ</li>
           <li>Privacy Policy</li>
           <li>Refund Policy</li>
+          <Link to="/admin/dashboard"><li>Admin Login</li></Link>
         </ul>
       </div>
 
