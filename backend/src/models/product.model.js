@@ -20,7 +20,7 @@ const productSchema = new mongoose.Schema(
 
     isFeatured: { type: Boolean, default: false },
 
-    isBestSeller: { type: Boolean, default: false }, // ✨ added
+    isBestSeller: { type: Boolean, default: false }, 
 
     images: [
       {
