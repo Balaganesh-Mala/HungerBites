@@ -133,16 +133,18 @@ const Profile = () => {
           <input
             type="text"
             placeholder="Full Name"
-            className="border p-3 rounded"
+            className="border p-3 rounded bg-gray-100 cursor-not-allowed"
             value={profile.name}
+            readOnly
             onChange={(e) => setProfile({ ...profile, name: e.target.value })}
           />
 
           <input
             type="text"
             placeholder="Phone Number"
-            className="border p-3 rounded"
+            className="border p-3 rounded bg-gray-100 cursor-not-allowed"
             value={profile.phone}
+            readOnly
             onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
           />
 
@@ -154,74 +156,9 @@ const Profile = () => {
             readOnly
           />
         </div>
-
-        <button
-          onClick={handleSaveProfile}
-          disabled={saving}
-          className="mt-6 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium"
-        >
-          {saving ? "Saving..." : "Save Profile"}
-        </button>
       </div>
 
-      {/* ADDRESS */}
-      <div className="bg-white p-6 rounded-xl shadow">
-        <h2 className="text-xl font-semibold mb-4 text-slate-800">
-          Shipping Address
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Street"
-            className="border p-3 rounded"
-            value={address.street}
-            onChange={(e) => setAddress({ ...address, street: e.target.value })}
-          />
-
-          <input
-            type="text"
-            placeholder="City"
-            className="border p-3 rounded"
-            value={address.city}
-            onChange={(e) => setAddress({ ...address, city: e.target.value })}
-          />
-
-          <input
-            type="text"
-            placeholder="State"
-            className="border p-3 rounded"
-            value={address.state}
-            onChange={(e) => setAddress({ ...address, state: e.target.value })}
-          />
-
-          <input
-            type="text"
-            placeholder="Pincode"
-            className="border p-3 rounded"
-            value={address.pincode}
-            onChange={(e) =>
-              setAddress({ ...address, pincode: e.target.value })
-            }
-          />
-
-          <input
-            type="text"
-            placeholder="Phone"
-            className="border p-3 rounded md:col-span-2"
-            value={address.phone}
-            onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-          />
-        </div>
-
-        <button
-          onClick={handleSaveAddress}
-          disabled={saving}
-          className="mt-6 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium"
-        >
-          {saving ? "Saving..." : "Save Address"}
-        </button>
-        <div className="flex justify-end mb-6">
+      <div className="flex justify-end mb-6">
           <button
             onClick={handleLogout}
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
@@ -229,7 +166,6 @@ const Profile = () => {
             Logout
           </button>
         </div>
-      </div>
     </div>
   );
 };

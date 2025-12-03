@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import Product from "../models/product.model.js";
+import Order from "../models/order.model.js";
 import cloudinary from "cloudinary";
 import { uploadToCloudinary } from "../middleware/upload.middleware.js";
 

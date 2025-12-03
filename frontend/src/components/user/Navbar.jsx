@@ -72,14 +72,14 @@ const Navbar = () => {
           </Link>
 
           <Link
-            to="/profile"
+            to="/about"
             className={`pb-1 hover:text-orange-700 ${
-              isActive("/profile")
+              isActive("/about")
                 ? "border-b-2 border-orange-600 text-orange-700"
                 : ""
             }`}
           >
-            Profile
+            About Us
           </Link>
         </div>
 

@@ -14,6 +14,8 @@ import Users from "../pages/admin/Users.jsx";
 import Payments from "../pages/admin/Payments.jsx";
 import Settings from "../pages/admin/Settings.jsx";
 import Categories from "../pages/admin/Categories.jsx";
+import BlogManager from "../pages/admin/BlogManager.jsx";
+
 
 import AdminProtectedRoute from "../components/common/ProtectedRoute.jsx";
 
@@ -40,6 +42,7 @@ const AdminRoutes = () => {
           <Route path="orders/:id" element={<OrderDetails />} />
           <Route path="users" element={<Users />} />
           <Route path="payments" element={<Payments />} />
+          <Route path="blogs" element={<BlogManager/>}/>
           <Route path="settings" element={<Settings />} />
           <Route path="categories" element={<Categories />} />
         </Route>
