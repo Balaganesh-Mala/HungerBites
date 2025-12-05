@@ -9,6 +9,8 @@ import {
   getAllUsers,
   updateOrderStatus,
 } from "../controllers/admin.controller.js";
+
+
 import { protect } from "../middleware/auth.middleware.js";
 import { isAdmin } from "../middleware/admin.middleware.js";
 
@@ -23,5 +25,7 @@ router.get("/top-products", protect, isAdmin, getTopProducts);
 router.get("/orders", protect, isAdmin, getAllOrders);
 router.get("/users", protect, isAdmin, getAllUsers);
 router.put("/order/:id/status", protect, isAdmin, updateOrderStatus);
+
+
 
 export default router;

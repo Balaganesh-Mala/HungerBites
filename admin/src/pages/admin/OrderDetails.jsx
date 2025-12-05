@@ -45,7 +45,11 @@ const OrderDetails = () => {
 
       loadOrder(); // Refresh UI
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Update failed", "error");
+      Swal.fire(
+        "Error",
+        err.response?.data?.message || "Update failed",
+        "error"
+      );
     }
   };
 
@@ -61,7 +65,6 @@ const OrderDetails = () => {
         <h2 className="text-lg font-semibold mb-2">Order ID: {order._id}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-
           <div>
             <p className="text-slate-500">Customer</p>
             <p className="font-medium">{order.user?.name}</p>
@@ -89,12 +92,69 @@ const OrderDetails = () => {
           <div>
             <p className="text-slate-500">Order Status</p>
             <p
-              className={`font-medium px-3 py-1 rounded-full inline-block text-xs ${statusColors[order.orderStatus]}`}
+              className={`font-medium px-3 py-1 rounded-full inline-block text-xs ${
+                statusColors[order.orderStatus]
+              }`}
             >
               {order.orderStatus}
             </p>
           </div>
+          {/* SHIP ORDER BUTTON */}
+          {order.orderStatus === "Processing" && !order.trackingId && (
+            <button
+              onClick={async () => {
+                try {
+                  const res = await adminApi.post(`/orders/ship/${order._id}`);
+                  Swal.fire(
+                    "Success!",
+                    "Order shipped. Tracking ID: " + res.data.trackingId,
+                    "success"
+                  );
+                  loadOrder();
+                } catch (err) {
+                  Swal.fire(
+                    "Error",
+                    err.response?.data?.message || "Failed to ship order",
+                    "error"
+                  );
+                }
+              }}
+              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg"
+            >
+              Ship Order
+            </button>
+          )}
+          {order.trackingId && (
+            <div className="mt-4">
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await adminApi.get(
+                      `/orders/track/${order.trackingId}`
+                    );
 
+                    Swal.fire(
+                      "Tracking Updated!",
+                      `Current Status: ${res.data.status}`,
+                      "success"
+                    );
+
+                    loadOrder(); // Refresh UI
+                  } catch (err) {
+                    Swal.fire(
+                      "Error",
+                      err.response?.data?.message ||
+                        "Unable to refresh tracking",
+                      "error"
+                    );
+                  }
+                }}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg"
+              >
+                Refresh Tracking
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -103,7 +163,6 @@ const OrderDetails = () => {
         <h2 className="text-lg font-semibold mb-4">Order Progress</h2>
 
         <div className="flex items-center justify-between relative">
-
           {statusSteps.map((status, idx) => (
             <div key={idx} className="text-center flex-1">
               <div
@@ -129,7 +188,6 @@ const OrderDetails = () => {
               </p>
             </div>
           ))}
-
         </div>
 
         {/* Update Status */}
@@ -150,9 +208,13 @@ const OrderDetails = () => {
       {/* SHIPPING ADDRESS */}
       <div className="bg-white p-5 rounded-xl shadow mb-6">
         <h2 className="text-lg font-semibold mb-4">Shipping Address</h2>
-        <p><strong>{order.shippingAddress.name}</strong></p>
+        <p>
+          <strong>{order.shippingAddress.name}</strong>
+        </p>
         <p>{order.shippingAddress.street}</p>
-        <p>{order.shippingAddress.city}, {order.shippingAddress.state}</p>
+        <p>
+          {order.shippingAddress.city}, {order.shippingAddress.state}
+        </p>
         <p>Pincode: {order.shippingAddress.pincode}</p>
         <p>Phone: {order.shippingAddress.phone}</p>
       </div>
@@ -160,10 +222,24 @@ const OrderDetails = () => {
       {/* ORDER ITEMS */}
       <div className="bg-white p-5 rounded-xl shadow">
         <h2 className="text-lg font-semibold mb-4">Order Items</h2>
+        {/* Tracking History */}
+        {order.trackingHistory?.length > 0 && (
+          <div className="bg-white p-5 rounded-xl shadow mt-6">
+            <h2 className="text-lg font-semibold mb-4">Tracking History</h2>
+
+            {order.trackingHistory.map((track, index) => (
+              <div key={index} className="border-b py-2 text-sm">
+                <p>
+                  <strong>{new Date(track.date).toLocaleString()}</strong>
+                </p>
+                <p>Status: {track.status}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {order.orderItems.map((item, idx) => (
           <div key={idx} className="flex items-center gap-4 border-b py-4">
-
             <img
               src={
                 item.productId?.images?.[0]?.url ||
@@ -186,7 +262,6 @@ const OrderDetails = () => {
         <div className="text-right mt-4 text-lg font-semibold">
           Total: ₹{order.totalPrice}
         </div>
-
       </div>
     </div>
   );

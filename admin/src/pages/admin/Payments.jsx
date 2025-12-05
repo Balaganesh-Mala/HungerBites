@@ -32,18 +32,24 @@ const Payments = () => {
   useEffect(() => {
     let data = payments;
 
-    // Apply search
     const s = search.toLowerCase();
+
+    // Search filter
     data = data.filter(
       (p) =>
-        p.orderId?.toLowerCase().includes(s) ||
-        p.paymentId?.toLowerCase().includes(s) ||
+        p.razorpay_order_id?.toLowerCase().includes(s) ||
+        p.razorpay_payment_id?.toLowerCase().includes(s) ||
         p.user?.email?.toLowerCase().includes(s)
     );
 
-    // Apply status filter
+    // Status filter mapping DB → UI
     if (statusFilter !== "all") {
-      data = data.filter((p) => p.status === statusFilter);
+      data = data.filter((p) => {
+        if (statusFilter === "Success") return p.status === "paid";
+        if (statusFilter === "Failed") return p.status === "failed";
+        if (statusFilter === "Pending") return p.status === "created";
+        return true;
+      });
     }
 
     setFiltered(data);
@@ -53,9 +59,14 @@ const Payments = () => {
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(
       filtered.map((p) => ({
-        PaymentID: p.paymentId || "N/A",
-        OrderID: p.orderId || "N/A",
-        Status: p.status,
+        PaymentID: p.razorpay_payment_id || "N/A",
+        OrderID: p.razorpay_order_id || "N/A",
+        Status:
+          p.status === "paid"
+            ? "Success"
+            : p.status === "failed"
+            ? "Failed"
+            : "Pending",
         Amount: p.amount,
         Email: p.user?.email || "N/A",
         CreatedAt: new Date(p.createdAt).toLocaleString(),
@@ -73,11 +84,15 @@ const Payments = () => {
     doc.text("Payments Report", 14, 10);
 
     const tableData = filtered.map((p) => [
-      p.paymentId || "N/A",
-      p.orderId || "N/A",
+      p.razorpay_payment_id || "N/A",
+      p.razorpay_order_id || "N/A",
       p.user?.email || "N/A",
       p.amount,
-      p.status,
+      p.status === "paid"
+        ? "Success"
+        : p.status === "failed"
+        ? "Failed"
+        : "Pending",
       new Date(p.createdAt).toLocaleDateString(),
     ]);
 
@@ -94,10 +109,8 @@ const Payments = () => {
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-6">Payments</h1>
 
-      {/* Filters Section */}
+      {/* Filters */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-
-        {/* Search */}
         <input
           type="text"
           placeholder="Search payments..."
@@ -106,7 +119,6 @@ const Payments = () => {
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* Status Filter */}
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -118,7 +130,6 @@ const Payments = () => {
           <option value="Pending">Pending</option>
         </select>
 
-        {/* Export Buttons */}
         <div className="flex gap-3">
           <button
             onClick={exportExcel}
@@ -133,12 +144,10 @@ const Payments = () => {
             Export PDF
           </button>
         </div>
-
       </div>
 
       {/* Table */}
       <div className="bg-white p-4 rounded-2xl shadow overflow-x-auto">
-
         {loading ? (
           <p className="text-center p-6">Loading payments...</p>
         ) : filtered.length === 0 ? (
@@ -159,22 +168,30 @@ const Payments = () => {
             <tbody>
               {filtered.map((p) => (
                 <tr key={p._id} className="border-b hover:bg-gray-50">
-                  <td className="py-3 text-sm">{p.paymentId || "N/A"}</td>
-                  <td className="py-3 text-sm">{p.orderId || "N/A"}</td>
+                  <td className="py-3 text-sm">
+                    {p.razorpay_payment_id || "N/A"}
+                  </td>
+                  <td className="py-3 text-sm">
+                    {p.razorpay_order_id || "N/A"}
+                  </td>
                   <td className="py-3 text-sm">{p.user?.email || "N/A"}</td>
                   <td className="py-3 text-sm">₹{p.amount}</td>
 
                   <td className="py-3 text-sm">
                     <span
                       className={`px-3 py-1 rounded-full text-xs ${
-                        p.status === "Success"
+                        p.status === "paid"
                           ? "bg-green-100 text-green-600"
-                          : p.status === "Failed"
+                          : p.status === "failed"
                           ? "bg-red-100 text-red-600"
                           : "bg-orange-100 text-orange-600"
                       }`}
                     >
-                      {p.status}
+                      {p.status === "paid"
+                        ? "Success"
+                        : p.status === "failed"
+                        ? "Failed"
+                        : "Pending"}
                     </span>
                   </td>
 
@@ -184,7 +201,6 @@ const Payments = () => {
                 </tr>
               ))}
             </tbody>
-
           </table>
         )}
       </div>

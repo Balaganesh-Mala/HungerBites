@@ -5,6 +5,43 @@ import bcrypt from "bcryptjs";
 //
 // 🧍‍♂️ Register User
 //
+
+//
+// 📱 Phone Login / Auto Registration
+//
+export const loginPhoneUser = asyncHandler(async (req, res) => {
+  const { phone } = req.body;
+
+  if (!phone) {
+    res.status(400);
+    throw new Error("Phone number required");
+  }
+
+  let user = await User.findOne({ phone });
+
+  if (!user) {
+    user = await User.create({
+      phone,
+      name: "User" + phone.slice(-4),
+      authProvider: "phone",
+    });
+  }
+
+  const token = user.generateAuthToken();
+
+  return res.json({
+    success: true,
+    message: "Login successful",
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+    },
+  });
+});
+
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, phone } = req.body;
 

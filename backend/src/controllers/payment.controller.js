@@ -12,7 +12,7 @@ dotenv.config();
 //
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_secret: process.env.RAZORPAY_SECRET,
 });
 
 //
@@ -51,6 +51,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     razorpay_payment_id,
     razorpay_signature,
     orderId,
+    amount
   } = req.body;
 
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -58,38 +59,41 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     throw new Error("Missing payment data");
   }
 
-  const generatedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+  // Generate signature hash
+  const expectedSignature = crypto
+    .createHmac("sha256", process.env.RAZORPAY_SECRET) // FIXED ENV
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest("hex");
 
-  if (generatedSignature !== razorpay_signature) {
+  if (expectedSignature !== razorpay_signature) {
     res.status(400);
     throw new Error("Invalid signature. Payment verification failed.");
   }
 
-  // 💾 Save payment record
+  // Save payment record
   const payment = await Payment.create({
     user: req.user._id,
-    razorpayOrderId: razorpay_order_id,
-    razorpayPaymentId: razorpay_payment_id,
-    razorpaySignature: razorpay_signature,
-    amount: req.body.amount,
-    status: "Success",
+    razorpay_order_id,       // FIXED names matching schema
+    razorpay_payment_id,
+    razorpay_signature,
+    amount: amount / 100,    // convert paisa → INR
+    status: "paid",          // FIXED valid status
   });
 
-  // 🧾 Update order status if exists
+  // Update Order
   if (orderId) {
-    const order = await Order.findById(orderId);
-    if (order) {
-      order.paymentStatus = "Paid";
-      order.paymentMethod = "Online";
-      order.razorpayPaymentId = razorpay_payment_id;
-      await order.save();
-    }
+    await Order.findByIdAndUpdate(orderId, {
+      paymentStatus: "Paid",
+      paymentMethod: "Online",
+      paymentInfo: {
+        id: razorpay_payment_id,
+        status: "Paid",
+        method: "Razorpay",
+      },
+    });
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     message: "Payment verified successfully",
     payment,

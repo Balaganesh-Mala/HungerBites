@@ -51,7 +51,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   const totalProducts = await Product.countDocuments();
 
   const totalRevenue = await Payment.aggregate([
-    { $match: { status: "Success" } },
+    { $match: { status: "paid" } }, // FIXED
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
 
@@ -66,12 +66,13 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
   });
 });
 
+
 //
 // 📊 Monthly revenue
 //
 export const getMonthlyRevenue = asyncHandler(async (req, res) => {
   const monthlyData = await Payment.aggregate([
-    { $match: { status: "Success" } },
+    { $match: { status: "paid" } }, // FIXED
     {
       $group: {
         _id: {
@@ -91,6 +92,7 @@ export const getMonthlyRevenue = asyncHandler(async (req, res) => {
 
   res.status(200).json({ success: true, monthlyRevenue: formatted });
 });
+
 
 //
 // 🧮 Top products

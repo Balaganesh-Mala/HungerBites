@@ -8,10 +8,15 @@ const paymentSchema = new mongoose.Schema(
     razorpay_signature: String,
     amount: Number,
     currency: { type: String, default: "INR" },
-    status: { type: String, enum: ["created", "paid", "failed"], default: "created" },
+    status: {
+      type: String,
+      enum: ["created", "paid", "failed"],   // FIXED values used backend
+      default: "created"
+    }
   },
   { timestamps: true }
 );
+
 
 const Payment = mongoose.model("Payment", paymentSchema);
 export default Payment;

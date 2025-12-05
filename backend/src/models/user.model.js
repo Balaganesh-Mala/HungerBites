@@ -11,20 +11,28 @@ const userSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: [true, "Please enter your email"],
       unique: true,
+      sparse: true,
       lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address"],
+      match: [/^\S+@\S+\.\S+$/, "Invalid email"],
     },
     password: {
       type: String,
-      required: [true, "Please enter your password"],
       minlength: 6,
-      select: false, // hide password in queries
+      select: false,
     },
     phone: {
       type: String,
+      unique: true,
+      sparse: true,
     },
+
+    authProvider: {
+      type: String,
+      enum: ["email", "phone"],
+      default: "email",
+    },
+
     role: {
       type: String,
       enum: ["user", "admin"],
@@ -74,13 +82,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 // 🪪 Generate JWT Token
 //
 userSchema.methods.generateAuthToken = function () {
-  return jwt.sign(
-    { id: this._id, role: this.role },
-    process.env.JWT_SECRET,
-    {
-      expiresIn: "30d", // valid for 30 days
-    }
-  );
+  return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET, {
+    expiresIn: "30d", // valid for 30 days
+  });
 };
 
 const User = mongoose.model("User", userSchema);

@@ -6,7 +6,11 @@ const orderSchema = new mongoose.Schema(
 
     orderItems: [
       {
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+        productId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
         name: String,
         quantity: Number,
         price: Number,
@@ -43,6 +47,24 @@ const orderSchema = new mongoose.Schema(
       enum: ["COD", "online"],
       default: "COD",
     },
+    trackingId: { type: String, default: "" },
+    shipmentId: { type: String, default: "" },
+    courierName: { type: String, default: "" },
+    shipmentStatus: {
+      type: String,
+      enum: [
+        "Pending",
+        "Booked",
+        "In Transit",
+        "Out for Delivery",
+        "Delivered",
+        "Cancelled",
+        "Shipped",
+      ],
+      default: "Pending",
+    },
+
+    trackingHistory: { type: Array, default: [] },
 
     orderStatus: {
       type: String,
@@ -52,6 +74,7 @@ const orderSchema = new mongoose.Schema(
 
     deliveredAt: Date,
   },
+
   { timestamps: true }
 );
 
