@@ -5,6 +5,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 
 import FeaturedProducts from "../../components/user/FeaturedProducts";
+import HeroVideoPlayer from "../../components/user/HeroVideoPlayer";
 import BestSellers from "../../components/user/BestSellers";
 import LimitedDeals from "../../components/user/LimitedDeals";
 import RecentlyViewed from "../../components/user/RecentlyViewed";
@@ -40,46 +41,9 @@ const Home = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
 
-      {/* HERO CAROUSEL */}
-      <div className="w-full">
-        <Swiper
-          modules={[Autoplay, Pagination]}
-          autoplay={{ delay: 2800, disableOnInteraction: false }}
-          pagination={{ clickable: true }}
-          loop={true}
-          className="h-[420px] md:h-[520px]"
-        >
-          {banners.map((banner) => (
-            <SwiperSlide key={banner.id}>
-              <div
-                className="relative w-full h-full bg-cover bg-center flex items-center justify-center"
-                style={{ backgroundImage: `url(${banner.image})` }}
-              >
-                <div className="absolute inset-0 bg-black/35"></div>
-
-                <div className="relative text-center text-white max-w-3xl px-8">
-                  <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight drop-shadow-lg">
-                    {banner.title}
-                  </h1>
-                  <p className="mt-4 text-base md:text-xl opacity-95 font-light">
-                    {banner.subtitle}
-                  </p>
-
-                  <Link
-                    to="/products"
-                    className="inline-flex items-center gap-2 mt-8 bg-orange-600 hover:bg-orange-700 px-10 py-4 rounded-2xl font-semibold transition shadow-lg hover:scale-[1.03]"
-                  >
-                    Shop Now →
-                  </Link>
-                </div>
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      </div>
-
       
-
+      
+<HeroVideoPlayer/>
       {/* PRODUCT SECTIONS */}
       <div className="space-y-24 pb-20">
         <FeaturedProducts />

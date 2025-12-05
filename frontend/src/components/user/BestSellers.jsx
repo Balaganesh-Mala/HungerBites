@@ -70,7 +70,7 @@ const BestSellers = () => {
 
       {/* PRODUCT GRID WITH STAGGER */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-        {products.map((product) => (
+        {products.slice(0, 8).map((product) => (
           <ProductCard key={product._id} product={product} />
         ))}
       </div>

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { FiStar } from "react-icons/fi";
+import { FaStar, FaArrowLeft } from "react-icons/fa";
+
 import api from "../../api/axios";
 import { addToCartApi } from "../../api/cart.api";
-import ProductCard from "../../components/user/ProductCard"
+import ProductCard from "../../components/user/ProductCard";
 import Swal from "sweetalert2";
 
 const ProductDetails = () => {
@@ -50,7 +53,10 @@ const ProductDetails = () => {
         const relatedRes = await api.get(
           `/products?category=${productData.category._id}`
         );
-        setRelated(relatedRes.data.products?.filter(p => p._id !== productData._id) || []);
+        setRelated(
+          relatedRes.data.products?.filter((p) => p._id !== productData._id) ||
+            []
+        );
       }
     } catch (err) {
       console.error("Product fetch error:", err);
@@ -82,7 +88,9 @@ const ProductDetails = () => {
     setAdding(true);
     try {
       await addToCartApi(product._id, 1);
-      Swal.fire("Success", "Added to cart!", "success").then(() => navigate("/cart"));
+      Swal.fire("Success", "Added to cart!", "success").then(() =>
+        navigate("/cart")
+      );
     } catch (err) {
       Swal.fire("Error", err.response?.data?.message || "Cart failed", "error");
     } finally {
@@ -120,7 +128,9 @@ const ProductDetails = () => {
   const submitReview = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
-      Swal.fire("Login Required", "Please login first!", "warning").then(() => navigate("/login"));
+      Swal.fire("Login Required", "Please login first!", "warning").then(() =>
+        navigate("/login")
+      );
       return;
     }
 
@@ -140,7 +150,11 @@ const ProductDetails = () => {
       setComment("");
       loadProduct(); // refresh
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Review failed", "error");
+      Swal.fire(
+        "Error",
+        err.response?.data?.message || "Review failed",
+        "error"
+      );
     }
   };
 
@@ -157,6 +171,12 @@ const ProductDetails = () => {
     <div className="bg-gray-50 min-h-screen pb-20">
       {/* HEADER */}
       <div className="max-w-6xl mx-auto px-6 py-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-gray-700 hover:text-orange-600 transition font-medium text-sm mb-4"
+        >
+          <FaArrowLeft size={16} /> Back
+        </button>
         <h1 className="text-2xl font-bold text-slate-900">Product Details</h1>
       </div>
 
@@ -179,39 +199,65 @@ const ProductDetails = () => {
           </p>
 
           <div className="space-y-1 text-sm text-slate-700">
-            <p><strong>Flavor:</strong> {product.flavor || "N/A"}</p>
-            <p><strong>Brand:</strong> {product.brand}</p>
-            <p><strong>Weight:</strong> {product.weight}</p>
+            <p>
+              <strong>Flavor:</strong> {product.flavor || "N/A"}
+            </p>
+            <p>
+              <strong>Brand:</strong> {product.brand}
+            </p>
+            <p>
+              <strong>Weight:</strong> {product.weight}
+            </p>
           </div>
 
           {/* PRICE */}
           <div className="flex items-center gap-4 mt-4">
-            <p className="text-3xl font-bold text-orange-600">₹{product.price}</p>
+            <p className="text-3xl font-bold text-orange-600">
+              ₹{product.price}
+            </p>
             {product.mrp > 0 && (
-              <p className="line-through text-slate-400 text-lg">₹{product.mrp}</p>
+              <p className="line-through text-slate-400 text-lg">
+                ₹{product.mrp}
+              </p>
             )}
           </div>
 
           {/* STARS */}
           <div className="flex items-center gap-1.5 mt-3">
-            {[...Array(5)].map((_, i) => (
-              <span key={i} className={i < filledStars ? "text-yellow-500 text-xl" : "text-gray-300 text-xl"}>⭐</span>
-            ))}
-            <p className="text-sm text-slate-500 ml-2">
-              ({product.numOfReviews || 0} reviews)
-            </p>
+            <div className="flex gap-1.5 items-center">
+              {[...Array(5)].map((_, i) => (
+                <FaStar
+                  key={i}
+                  size={22}
+                  className={
+                    i < Math.round(product?.ratings || 0)
+                      ? "text-yellow-500"
+                      : "text-gray-300"
+                  }
+                />
+              ))}
+              <span className="text-sm text-slate-500 ml-2">
+                ({product?.numOfReviews || 0} reviews)
+              </span>
+            </div>
           </div>
 
           {/* STOCK */}
           <p className="mt-4 text-sm">
-            <span className={`px-3 py-1 rounded-full text-xs ${
+            <span
+              className={`px-3 py-1 rounded-full text-xs ${
                 product.stock === 0
                   ? "bg-red-100 text-red-600"
                   : product.stock > 50
                   ? "bg-green-100 text-green-700"
                   : "bg-orange-100 text-orange-600"
-              }`}>
-              {product.stock === 0 ? "Out of Stock" : product.stock > 50 ? "In Stock" : "Limited Stock"}
+              }`}
+            >
+              {product.stock === 0
+                ? "Out of Stock"
+                : product.stock > 50
+                ? "In Stock"
+                : "Limited Stock"}
             </span>
           </p>
 
@@ -221,10 +267,16 @@ const ProductDetails = () => {
               onClick={handleAddToCart}
               disabled={adding || product.stock === 0}
               className={`px-6 py-3 rounded-xl font-semibold text-white ${
-                product.stock === 0 ? "bg-gray-400 cursor-not-allowed" : "bg-orange-600 hover:bg-orange-700"
+                product.stock === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-orange-600 hover:bg-orange-700"
               }`}
             >
-              {product.stock === 0 ? "Out of Stock" : adding ? "Adding..." : "Add to Cart"}
+              {product.stock === 0
+                ? "Out of Stock"
+                : adding
+                ? "Adding..."
+                : "Add to Cart"}
             </button>
 
             <button
@@ -269,12 +321,23 @@ const ProductDetails = () => {
             <div key={i} className="border-b pb-3">
               <div className="flex items-center gap-2">
                 <p className="font-semibold">{rev.name}</p>
-                <p className="text-yellow-500">{"⭐".repeat(rev.rating)}</p>
+
+                {/* ⭐ Fully Filled Star Icons */}
+                <div className="flex text-yellow-500">
+                  {Array.from({ length: Math.round(rev.rating || 0) }).map(
+                    (_, i) => (
+                      <FiStar
+                        key={i}
+                        size={18}
+                        fill="currentColor"
+                        className="stroke-none"
+                      />
+                    )
+                  )}
+                </div>
               </div>
+
               <p className="text-slate-600 text-sm">{rev.comment}</p>
-              <p className="text-xs text-slate-500">
-                {new Date(rev.createdAt).toLocaleString("en-IN")}
-              </p>
             </div>
           ))}
         </div>

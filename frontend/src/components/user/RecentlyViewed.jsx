@@ -29,7 +29,7 @@ const RecentlyViewed = () => {
       </div>
 
       <div className="flex gap-5 overflow-x-auto scrollbar-hide">
-        {items.map((p) => (
+        {items.slice(0, 8).map((p) => (
           <Link
             key={p._id}
             to={`/product/${p._id}`}

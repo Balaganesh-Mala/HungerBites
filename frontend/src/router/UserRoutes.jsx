@@ -12,6 +12,8 @@ import Register from "../pages/user/Register";
 import Login from "../pages/user/Login";
 import AboutUs from "../pages/user/AboutUs";
 import ContactUs from "../pages/user/ContactUs";
+import NotFound from "../pages/user/NotFound";
+
 
 const UserRoutes = () => {
   return (
@@ -28,6 +30,7 @@ const UserRoutes = () => {
         <Route path="/contact" element={<ContactUs/>}/>
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );

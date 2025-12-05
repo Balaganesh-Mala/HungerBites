@@ -48,18 +48,17 @@ const ShopByFlavor = () => {
 
       {/* ✅ SWIPER CAROUSEL */}
       <Swiper
-  modules={[Pagination, Autoplay]}
-  loop={true}
-  pagination={{ clickable: true }}
-  autoplay={{ delay: 2500, disableOnInteraction: false }}
-  breakpoints={{
-    0: { slidesPerView: 2, spaceBetween: 12 },
-    640: { slidesPerView: 4, spaceBetween: 16 },
-    1024: { slidesPerView: 6, spaceBetween: 20 }, // ✅ 6 cards in desktop
-  }}
-  className="mySwiper"
->
-
+        modules={[Pagination, Autoplay]}
+        loop={true}
+        pagination={{ clickable: true }}
+        autoplay={{ delay: 2500, disableOnInteraction: false }}
+        breakpoints={{
+          0: { slidesPerView: 2, spaceBetween: 12 },
+          640: { slidesPerView: 4, spaceBetween: 16 },
+          1024: { slidesPerView: 6, spaceBetween: 20 }, // ✅ 6 cards in desktop
+        }}
+        className="mySwiper"
+      >
         {flavors.map((flavor) => (
           <SwiperSlide key={flavor}>
             <motion.div
