@@ -1,3 +1,4 @@
+import Product from "../models/product.model.js";
 import asyncHandler from "express-async-handler";
 import Razorpay from "razorpay";
 import crypto from "crypto";
@@ -51,7 +52,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     razorpay_payment_id,
     razorpay_signature,
     orderId,
-    amount
+    amount,
   } = req.body;
 
   if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -59,9 +60,9 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     throw new Error("Missing payment data");
   }
 
-  // Generate signature hash
+  // 1️⃣ Verify Signature
   const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_SECRET) // FIXED ENV
+    .createHmac("sha256", process.env.RAZORPAY_SECRET)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest("hex");
 
@@ -70,27 +71,47 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     throw new Error("Invalid signature. Payment verification failed.");
   }
 
-  // Save payment record
+  // 2️⃣ Save Payment record
   const payment = await Payment.create({
     user: req.user._id,
-    razorpay_order_id,       // FIXED names matching schema
+    razorpay_order_id,
     razorpay_payment_id,
     razorpay_signature,
-    amount: amount / 100,    // convert paisa → INR
-    status: "paid",          // FIXED valid status
+    amount: amount / 100,      // convert from paisa to INR
+    status: "paid",
   });
 
-  // Update Order
+  // 3️⃣ Update related Order (payment status + stock)
   if (orderId) {
-    await Order.findByIdAndUpdate(orderId, {
-      paymentStatus: "Paid",
-      paymentMethod: "Online",
-      paymentInfo: {
-        id: razorpay_payment_id,
-        status: "Paid",
-        method: "Razorpay",
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      res.status(404);
+      throw new Error("Order not found for this payment");
+    }
+
+    // Update order payment details
+    order.paymentStatus = "Paid";
+    order.paymentMethod = "online";  // 👈 must match enum
+    order.paymentInfo = {
+      id: razorpay_payment_id,
+      status: "Paid",
+      method: "Razorpay",
+    };
+
+    // Reduce stock for ordered products
+    const bulkOps = order.orderItems.map((it) => ({
+      updateOne: {
+        filter: { _id: it.productId },
+        update: { $inc: { stock: -it.quantity } },
       },
-    });
+    }));
+
+    if (bulkOps.length > 0) {
+      await Product.bulkWrite(bulkOps);
+    }
+
+    await order.save();
   }
 
   return res.status(200).json({
@@ -99,6 +120,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     payment,
   });
 });
+
 
 //
 // ❌ Handle failed payments (for logging)

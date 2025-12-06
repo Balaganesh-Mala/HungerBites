@@ -66,10 +66,7 @@ const Checkout = () => {
   const buildOrderData = () => ({
     orderItems: cartItems.map((item) => ({
       productId: item.product?._id,
-      name:
-        item.product?.title ||
-        item.product?.name ||
-        "Unknown Product",
+      name: item.product?.title || item.product?.name || "Unknown Product",
       quantity: item.quantity,
       price: item?.product?.price ?? item?.price ?? 0,
     })),
@@ -111,61 +108,60 @@ const Checkout = () => {
 
   // 🟧 Online Payment
   const placeOnlineOrder = async () => {
-  const orderData = buildOrderData();
+    const orderData = buildOrderData();
 
-  const loaded = await loadRazorpay(
-    "https://checkout.razorpay.com/v1/checkout.js"
-  );
-  if (!loaded) {
-    return Swal.fire("Error", "Failed to load Razorpay SDK", "error");
-  }
+    const loaded = await loadRazorpay(
+      "https://checkout.razorpay.com/v1/checkout.js"
+    );
+    if (!loaded) {
+      return Swal.fire("Error", "Failed to load Razorpay SDK", "error");
+    }
 
-  // Step 1: ask backend to create Razorpay Order
-  const res = await api.post("/orders", orderData);
-  const { razorpayOrderId, amount, order } = res.data;
-  const orderId = order?._id;
+    // Step 1: ask backend to create Razorpay Order
+    const res = await api.post("/orders", orderData);
+    const { razorpayOrderId, amount, orderId } = res.data;
 
-  // Step 2: open Razorpay UI
-  const options = {
-    key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-    amount,
-    currency: "INR",
-    name: "Hunger Bites",
-    description: "Order Payment",
-    order_id: razorpayOrderId,
+    // Step 2: open Razorpay UI
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount,
+      currency: "INR",
+      name: "Hunger Bites",
+      description: "Order Payment",
+      order_id: razorpayOrderId,
 
-    handler: async (response) => {
-      try {
-        await api.post("/payment/verify", {
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_signature: response.razorpay_signature,
-          amount,
-          orderId
-        });
+      handler: async (response) => {
+        try {
+          await api.post("/payment/verify", {
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            amount,
+            orderId,
+          });
 
-        if (!buyNowData?.buyNow) {
-          await clearCartApi();
+          if (!buyNowData?.buyNow) {
+            await clearCartApi();
+          }
+
+          Swal.fire("Success", "Payment completed!", "success");
+          navigate("/orders");
+        } catch (err) {
+          console.log("Payment verify failed", err);
+          Swal.fire("Error", "Payment verification failed", "error");
         }
+      },
 
-        Swal.fire("Success", "Payment completed!", "success");
-        navigate("/orders");
-      } catch (err) {
-        console.log("Payment verify failed", err);
-        Swal.fire("Error", "Payment verification failed", "error");
-      }
-    },
+      prefill: {
+        name: address.name,
+        contact: address.phone,
+      },
 
-    prefill: {
-      name: address.name,
-      contact: address.phone,
-    },
-    
-    theme: { color: "#ff6600" },
+      theme: { color: "#ff6600" },
+    };
+
+    new window.Razorpay(options).open();
   };
-
-  new window.Razorpay(options).open();
-};
 
   const handlePlaceOrder = () => {
     if (!address.name || !address.phone || !address.city || !address.pincode) {

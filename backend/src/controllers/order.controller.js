@@ -80,10 +80,10 @@ export const createOrder = asyncHandler(async (req, res) => {
     throw new Error("No items in the order");
   }
 
-  // Validate products and compute price
+  // 1️⃣ Validate products before creating ANY order
   const { finalOrderItems, itemsPrice } = await buildFinalOrderItems(orderItems);
 
-  // ONLINE PAYMENT → create Razorpay order
+  // 2️⃣ ONLINE PAYMENT FLOW
   if (paymentMethod === "online") {
     const options = {
       amount: totalPrice * 100,
@@ -91,18 +91,30 @@ export const createOrder = asyncHandler(async (req, res) => {
       receipt: `receipt_${Date.now()}`,
     };
 
-    // ✅ using shared Razorpay instance (fixed)
+    // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create(options);
+
+    // Create order in DB (Pending payment)
+    const order = await Order.create({
+      user: req.user._id,
+      orderItems: finalOrderItems,
+      itemsPrice: totalPrice ?? itemsPrice,
+      totalPrice: totalPrice ?? itemsPrice,
+      paymentMethod: "online",
+      paymentStatus: "Pending",
+      shippingAddress,
+      orderStatus: "Processing",
+    });
 
     return res.status(200).json({
       success: true,
       razorpayOrderId: razorpayOrder.id,
       amount: razorpayOrder.amount,
-      currency: razorpayOrder.currency,
+      orderId: order._id, // return orderId
     });
   }
 
-  // COD → create order + decrease stock
+  // 3️⃣ COD FLOW (unchanged)
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
@@ -148,6 +160,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     throw err;
   }
 });
+
 
 //
 // VERIFY PAYMENT → ONLY after success from Razorpay
