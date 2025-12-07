@@ -1,28 +1,15 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, RecaptchaVerifier } from "firebase/auth";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCzIDpPH3q9Q3JZhaLPWapl5Ty4oYLa5tk",
-  authDomain: "wonew-f7e49.firebaseapp.com",
-  projectId: "wonew-f7e49",
-  storageBucket: "wonew-f7e49.appspot.com",
-  messagingSenderId: "833112336792",
-  appId: "1:833112336792:web:1185ee50ac3e7ea2ffa3ed",
+  apiKey: "AIzaSyCHws3R27my3Y06kZWPzCt7o4J9mbrDylw",
+  authDomain: "flutter-ai-playground-29a3d.firebaseapp.com",
+  projectId: "flutter-ai-playground-29a3d",
+  storageBucket: "flutter-ai-playground-29a3d.firebasestorage.app",
+  messagingSenderId: "124672282726",
+  appId: "1:124672282726:web:e922d7f19a0fb385439da7"
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-
-export const setupRecaptcha = () => {
-  if (!window.recaptchaVerifier) {
-    window.recaptchaVerifier = new RecaptchaVerifier(
-      auth,
-      "recaptcha-container",
-      {
-        size: "invisible",
-      }
-    );
-
-    window.recaptchaVerifier.render();
-  }
-};
+export { RecaptchaVerifier, signInWithPhoneNumber };

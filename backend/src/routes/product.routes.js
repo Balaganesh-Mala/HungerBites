@@ -20,8 +20,8 @@ router.post("/:id/review", protect, addReview);
 
 
 // ADMIN
-router.post("/", protect, isAdmin, upload.single("image"), createProduct);
-router.put("/:id", protect, isAdmin, upload.single("image"), updateProduct);
+router.post("/", protect, isAdmin, upload.array("images", 6), createProduct);
+router.put("/:id", protect, isAdmin, upload.array("images", 6), updateProduct);
 router.delete("/:id", protect, isAdmin, deleteProduct);
 
 

@@ -2,46 +2,98 @@ import asyncHandler from "express-async-handler";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 
-//
-// 🧍‍♂️ Register User
-//
 
 //
-// 📱 Phone Login / Auto Registration
+// 📌 REGISTER PHONE USER (OTP Verified)
 //
-export const loginPhoneUser = asyncHandler(async (req, res) => {
-  const { phone } = req.body;
+export const registerPhoneUser = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+  const firebasePhone = req.firebaseUser.phone_number;
 
-  if (!phone) {
+  if (!firebasePhone || !name || !email || !password) {
     res.status(400);
-    throw new Error("Phone number required");
+    throw new Error("Missing required fields");
   }
 
-  let user = await User.findOne({ phone });
+  let existingUser = await User.findOne({ 
+    $or: [{ email }, { phone: firebasePhone }] 
+  });
 
-  if (!user) {
-    user = await User.create({
-      phone,
-      name: "User" + phone.slice(-4),
-      authProvider: "phone",
-    });
+  if (existingUser) {
+    res.status(400);
+    throw new Error("User already exists");
   }
 
-  const token = user.generateAuthToken();
+  const user = await User.create({
+    name,
+    email,
+    password,        // ⚠️ store plain — model hashes it
+    phone: firebasePhone,
+    authProvider: "phone",
+  });
 
-  return res.json({
+  res.status(201).json({
     success: true,
-    message: "Login successful",
-    token,
+    message: "Registration success",
+    token: user.generateAuthToken(),
     user: {
       _id: user._id,
       name: user.name,
+      email: user.email,
       phone: user.phone,
-      role: user.role,
     },
   });
 });
 
+
+
+export const resetPasswordPhone = asyncHandler(async (req, res) => {
+  const { newPassword } = req.body;
+  const firebasePhone = req.firebaseUser.phone_number;
+
+  if (!firebasePhone || !newPassword) {
+    res.status(400);
+    throw new Error("Missing phone or new password");
+  }
+
+  const user = await User.findOne({ phone: firebasePhone });
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  user.password = newPassword;  // ⚡ let model hash it
+  await user.save();
+
+  res.json({
+    success: true,
+    message: "Password reset successful",
+  });
+});
+
+
+
+export const checkEmailExists = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const exists = await User.findOne({ email });
+  res.json({ exists: !!exists });
+});
+
+export const checkPhoneExists = asyncHandler(async (req, res) => {
+  let { phone } = req.body;
+
+  // normalize stored format → +91XXXXXXXXXX
+  if (phone.length === 10) phone = `+91${phone}`;
+
+  const exists = await User.findOne({ phone });
+  res.json({ exists: !!exists });
+});
+
+
+
+//
+// 📌 Normal Email REGISTER
+//
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, phone } = req.body;
 
@@ -50,32 +102,42 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Please fill in all required fields");
   }
 
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
+  const existing = await User.findOne({ email });
+  if (existing) {
     res.status(400);
     throw new Error("User already exists");
   }
 
-  const user = await User.create({ name, email, password, phone });
+  const user = await User.create({
+    name,
+    email,
+    password,      // ⚡ plain — model hashes
+    phone,
+    authProvider: "email"
+  });
 
   res.status(201).json({
     success: true,
     message: "User registered successfully",
+    token: user.generateAuthToken(),
     user: {
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
     },
-    token: user.generateAuthToken(),
   });
 });
 
+
+
+
 //
-// 🔐 Login User
+// 📌 Email + Password Login
 //
 export const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+
   const user = await User.findOne({ email }).select("+password");
 
   if (!user || !(await user.matchPassword(password))) {
@@ -86,18 +148,19 @@ export const loginUser = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: "Login successful",
+    token: user.generateAuthToken(),
     user: {
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
     },
-    token: user.generateAuthToken(),
   });
 });
 
+
 //
-// 👤 Get Profile (Logged user)
+// 👤 Get Profile
 //
 export const getProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id).select("-password");
@@ -105,5 +168,8 @@ export const getProfile = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("User not found");
   }
-  res.status(200).json({ success: true, user });
+  res.status(200).json({
+    success: true,
+    user,
+  });
 });

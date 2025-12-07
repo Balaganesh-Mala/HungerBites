@@ -7,7 +7,7 @@ import cloudinary from "../config/cloudinary.js";
 // ➕ CREATE BLOG
 //
 export const createBlog = asyncHandler(async (req, res) => {
-  const { title, description, socialLinks, readMoreLink, readMore } = req.body;
+  const { title, description, socialLinks, readMoreLink } = req.body;
 
   if (!title || !description) {
     res.status(400);
@@ -24,11 +24,19 @@ export const createBlog = asyncHandler(async (req, res) => {
     };
   }
 
+  let parsedLinks = {};
+  try {
+    parsedLinks =
+      typeof socialLinks === "string" ? JSON.parse(socialLinks) : socialLinks;
+  } catch {
+    parsedLinks = {};
+  }
+
   const blog = await Blog.create({
     title,
     description,
     image: imageData,
-    socialLinks: socialLinks ? JSON.parse(socialLinks) : {},
+    socialLinks: parsedLinks,
     readMoreLink: readMoreLink || "",
   });
 
@@ -89,9 +97,12 @@ export const updateBlog = asyncHandler(async (req, res) => {
     throw new Error("Blog not found");
   }
 
+  // Update image
   if (req.file) {
     if (blog.image?.public_id) {
-      await cloudinary.uploader.destroy(blog.image.public_id);
+      try {
+        await cloudinary.uploader.destroy(blog.image.public_id);
+      } catch {}
     }
 
     const result = await uploadToCloudinary(req.file.buffer, "blogs");
@@ -101,10 +112,28 @@ export const updateBlog = asyncHandler(async (req, res) => {
     };
   }
 
-  blog.title = req.body.title ?? blog.title;
-  blog.description = req.body.description ?? blog.description;
-  blog.readMoreLink = req.body.readMoreLink ?? blog.readMoreLink;
-  blog.socialLinks = req.body.socialLinks ? JSON.parse(req.body.socialLinks) : blog.socialLinks;
+  // Safe updates
+  const safeUpdate = (field) =>
+    req.body[field] !== undefined && req.body[field] !== ""
+      ? req.body[field]
+      : blog[field];
+
+  blog.title = safeUpdate("title");
+  blog.description = safeUpdate("description");
+  blog.readMoreLink = safeUpdate("readMoreLink");
+
+  if (req.body.socialLinks) {
+    let links;
+    try {
+      links =
+        typeof req.body.socialLinks === "string"
+          ? JSON.parse(req.body.socialLinks)
+          : req.body.socialLinks;
+    } catch {
+      links = blog.socialLinks;
+    }
+    blog.socialLinks = links;
+  }
 
   await blog.save();
 
@@ -127,8 +156,11 @@ export const deleteBlog = asyncHandler(async (req, res) => {
   }
 
   if (blog.image?.public_id) {
+  try {
     await cloudinary.uploader.destroy(blog.image.public_id);
-  }
+  } catch {}
+}
+
 
   await blog.deleteOne();
 

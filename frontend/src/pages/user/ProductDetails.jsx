@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { FiStar } from "react-icons/fi";
 import { FaStar, FaArrowLeft } from "react-icons/fa";
 
 import api from "../../api/axios";
@@ -16,11 +15,12 @@ const ProductDetails = () => {
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(0);
 
   const [rating, setRating] = useState("");
   const [comment, setComment] = useState("");
 
-  // ⭐ Save recently viewed
+  // Save recently viewed
   const saveRecentlyViewed = (product) => {
     if (!product?._id) return;
 
@@ -38,7 +38,6 @@ const ProductDetails = () => {
     localStorage.setItem("recent_viewed", JSON.stringify(viewed));
   };
 
-  // 🔥 Load Product
   const loadProduct = async () => {
     try {
       const res = await api.get(`/products/${id}`);
@@ -48,7 +47,7 @@ const ProductDetails = () => {
       setProduct(productData);
       saveRecentlyViewed(productData);
 
-      // ✅ Load Related Products
+      // Related
       if (productData.category?._id) {
         const relatedRes = await api.get(
           `/products?category=${productData.category._id}`
@@ -59,7 +58,6 @@ const ProductDetails = () => {
         );
       }
     } catch (err) {
-      console.error("Product fetch error:", err);
       Swal.fire("Error", "Failed to load product", "error");
     } finally {
       setLoading(false);
@@ -70,7 +68,7 @@ const ProductDetails = () => {
     loadProduct();
   }, [id]);
 
-  // 🧺 Add to Cart Logic
+  // Add to cart
   const handleAddToCart = async () => {
     if (!product?._id) return;
 
@@ -98,14 +96,14 @@ const ProductDetails = () => {
     }
   };
 
-  // 🟧 Buy Now Logic
+  // Buy Now
   const handleBuyNow = () => {
     const token = localStorage.getItem("token");
     if (!token) {
       Swal.fire({
         icon: "warning",
         title: "Login Required",
-        text: "Please login to place an order.",
+        text: "Please login first",
         confirmButtonColor: "#ff7a00",
       }).then(() => navigate("/login"));
       return;
@@ -123,43 +121,6 @@ const ProductDetails = () => {
       },
     });
   };
-
-  // ⭐ Submit Review Logic
-  const submitReview = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      Swal.fire("Login Required", "Please login first!", "warning").then(() =>
-        navigate("/login")
-      );
-      return;
-    }
-
-    if (!rating || !comment) {
-      Swal.fire("Error", "Please fill rating & comment", "error");
-      return;
-    }
-
-    try {
-      await api.post(
-        `/products/${id}/review`,
-        { rating, comment },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      Swal.fire("Success", "Review submitted!", "success");
-      setRating("");
-      setComment("");
-      loadProduct(); // refresh
-    } catch (err) {
-      Swal.fire(
-        "Error",
-        err.response?.data?.message || "Review failed",
-        "error"
-      );
-    }
-  };
-
-  // ✅ Fix rating count display
-  const filledStars = Math.round(product?.ratings || 0);
 
   if (loading)
     return <p className="text-center text-gray-500 py-20">Loading...</p>;
@@ -181,16 +142,54 @@ const ProductDetails = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* IMAGE */}
-        <div className="bg-white rounded-xl shadow p-4">
-          <img
-            src={product.images?.[0]?.url || product.images?.[0]}
-            alt={product.name}
-            className="w-full h-100 object-cover rounded-lg"
-          />
+        {/* LEFT */}
+        <div className="flex flex-col md:flex-row gap-4">
+          
+          {/* Thumbnails left in desktop */}
+          <div className="hidden md:flex flex-col gap-3">
+            {product.images?.map((img, i) => (
+              <img
+                key={i}
+                src={img.url}
+                alt=""
+                className={`w-16 h-16 rounded-lg cursor-pointer border object-cover ${
+                  selectedImage === i
+                    ? "border-orange-500 scale-105"
+                    : "border-gray-300"
+                }`}
+                onClick={() => setSelectedImage(i)}
+              />
+            ))}
+          </div>
+
+          {/* Main Image */}
+          <div className="border rounded-xl w-full overflow-hidden relative group">
+            <img
+              src={product.images?.[selectedImage]?.url}
+              alt={product.name}
+              className="object-cover w-full h-96 transform transition duration-300 group-hover:scale-125"
+            />
+          </div>
+
+          {/* Thumbnails bottom in mobile */}
+          <div className="flex md:hidden flex-row gap-3 mt-2 justify-center">
+            {product.images?.map((img, i) => (
+              <img
+                key={i}
+                src={img.url}
+                alt=""
+                className={`w-14 h-14 rounded-lg cursor-pointer border object-cover ${
+                  selectedImage === i
+                    ? "border-orange-500 scale-105"
+                    : "border-gray-300"
+                }`}
+                onClick={() => setSelectedImage(i)}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* CONTENT */}
+        {/* RIGHT */}
         <div>
           <h2 className="text-3xl font-semibold mb-2">{product.name}</h2>
 
@@ -199,47 +198,35 @@ const ProductDetails = () => {
           </p>
 
           <div className="space-y-1 text-sm text-slate-700">
-            <p>
-              <strong>Flavor:</strong> {product.flavor || "N/A"}
-            </p>
-            <p>
-              <strong>Brand:</strong> {product.brand}
-            </p>
-            <p>
-              <strong>Weight:</strong> {product.weight}
-            </p>
+            <p><strong>Flavor:</strong> {product.flavor || "N/A"}</p>
+            <p><strong>Brand:</strong> {product.brand}</p>
+            <p><strong>Weight:</strong> {product.weight}</p>
           </div>
 
           {/* PRICE */}
           <div className="flex items-center gap-4 mt-4">
-            <p className="text-3xl font-bold text-orange-600">
-              ₹{product.price}
-            </p>
+            <p className="text-3xl font-bold text-orange-600">₹{product.price}</p>
             {product.mrp > 0 && (
-              <p className="line-through text-slate-400 text-lg">
-                ₹{product.mrp}
-              </p>
+              <p className="line-through text-slate-400 text-lg">₹{product.mrp}</p>
             )}
           </div>
 
-          {/* STARS */}
+          {/* RATING */}
           <div className="flex items-center gap-1.5 mt-3">
-            <div className="flex gap-1.5 items-center">
-              {[...Array(5)].map((_, i) => (
-                <FaStar
-                  key={i}
-                  size={22}
-                  className={
-                    i < Math.round(product?.ratings || 0)
-                      ? "text-yellow-500"
-                      : "text-gray-300"
-                  }
-                />
-              ))}
-              <span className="text-sm text-slate-500 ml-2">
-                ({product?.numOfReviews || 0} reviews)
-              </span>
-            </div>
+            {[...Array(5)].map((_, i) => (
+              <FaStar
+                key={i}
+                size={22}
+                className={
+                  i < Math.round(product?.ratings || 0)
+                    ? "text-yellow-500"
+                    : "text-gray-300"
+                }
+              />
+            ))}
+            <span className="text-sm text-slate-500 ml-2">
+              ({product?.numOfReviews || 0} reviews)
+            </span>
           </div>
 
           {/* STOCK */}
@@ -294,7 +281,7 @@ const ProductDetails = () => {
         </div>
       </div>
 
-      {/* ⭐ RELATED PRODUCTS */}
+      {/* RELATED PRODUCTS */}
       {related.length > 0 && (
         <div className="max-w-6xl mx-auto mt-12 px-6">
           <h3 className="text-xl font-semibold mb-4">Related Products</h3>
@@ -309,39 +296,6 @@ const ProductDetails = () => {
           </div>
         </div>
       )}
-
-      {/* ⭐ REVIEWS (PUBLIC VISIBLE) */}
-      <div className="max-w-6xl mx-auto mt-10 px-6 bg-white p-6 rounded-xl shadow">
-        <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
-        {!product.reviews?.length && (
-          <p className="text-slate-500">No reviews yet.</p>
-        )}
-        <div className="space-y-4">
-          {product.reviews?.map((rev, i) => (
-            <div key={i} className="border-b pb-3">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold">{rev.name}</p>
-
-                {/* ⭐ Fully Filled Star Icons */}
-                <div className="flex text-yellow-500">
-                  {Array.from({ length: Math.round(rev.rating || 0) }).map(
-                    (_, i) => (
-                      <FiStar
-                        key={i}
-                        size={18}
-                        fill="currentColor"
-                        className="stroke-none"
-                      />
-                    )
-                  )}
-                </div>
-              </div>
-
-              <p className="text-slate-600 text-sm">{rev.comment}</p>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

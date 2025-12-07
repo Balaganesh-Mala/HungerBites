@@ -8,8 +8,9 @@ import Cart from "../pages/user/Cart";
 import Checkout from "../pages/user/Checkout";
 import Orders from "../pages/user/Orders";
 import Profile from "../pages/user/Profile";
-import Register from "../pages/user/Register";
+import RegisterPhone from "../pages/user/RegisterPhone";
 import Login from "../pages/user/Login";
+import ForgotPasswordPhone from "../pages/user/ForgotPasswordPhone";
 import AboutUs from "../pages/user/AboutUs";
 import ContactUs from "../pages/user/ContactUs";
 import NotFound from "../pages/user/NotFound";
@@ -28,8 +29,10 @@ const UserRoutes = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/about" element={<AboutUs />} />
         <Route path="/contact" element={<ContactUs/>}/>
-        <Route path="/register" element={<Register />} />
+        <Route path="/register" element={<RegisterPhone />} />
+
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPhone />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

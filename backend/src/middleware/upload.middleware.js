@@ -1,26 +1,33 @@
 import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
+import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
 const storage = multer.memoryStorage();
-export const upload = multer({ storage });
+export const upload = multer({ storage, limits: { files: 6 } });
 
+// Upload single image
 export const uploadToCloudinary = (buffer, folder = "products") => {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder },
-      (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      }
-    );
+    const stream = cloudinary.uploader.upload_stream({ folder }, (err, result) => {
+      if (err) reject(err);
+      else resolve(result);
+    });
 
     streamifier.createReadStream(buffer).pipe(stream);
   });
+};
+
+// Upload multiple images
+export const uploadMultipleToCloudinary = async (files, folder = "products") => {
+  const uploadedImages = [];
+
+  for (const file of files) {
+    const uploaded = await uploadToCloudinary(file.buffer, folder);
+    uploadedImages.push({
+      public_id: uploaded.public_id,
+      url: uploaded.secure_url,
+    });
+  }
+
+  return uploadedImages;
 };

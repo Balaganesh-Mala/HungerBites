@@ -1,66 +1,62 @@
 import asyncHandler from "express-async-handler";
 import Product from "../models/product.model.js";
 import Order from "../models/order.model.js";
-import cloudinary from "cloudinary";
-import { uploadToCloudinary } from "../middleware/upload.middleware.js";
+import cloudinary from "../config/cloudinary.js";
+import { uploadMultipleToCloudinary } from "../middleware/upload.middleware.js";
 
 //
 // ➕ CREATE PRODUCT
 //
 export const createProduct = asyncHandler(async (req, res) => {
-  const {
-    name,
-    description,
-    price,
-    mrp,
-    category,
-    stock,
-    weight,
-    flavor,
-    brand,
-    isFeatured,
-    isBestSeller
-  } = req.body;
+  try {
+    const {
+      name,
+      description,
+      price,
+      stock,
+      mrp,
+      weight,
+      flavor,
+      category,
+      brand,
+      isFeatured,
+      isBestSeller,
+    } = req.body;
 
-  if (!name || !price || !category) {
-    res.status(400);
-    throw new Error("Name, price and category are required");
-  }
+    if (!name || !description || !price || !category) {
+      res.status(400);
+      throw new Error("Required fields missing");
+    }
 
-  let images = [];
+    // Upload multiple images (max 6)
+    let imageData = [];
+    if (req.files && req.files.length > 0) {
+      imageData = await uploadMultipleToCloudinary(req.files, "products");
+    }
 
-  if (req.file) {
-    const imgUpload = await uploadToCloudinary(
-      req.file.buffer,
-      "hungerbites/products"
-    );
-
-    images.push({
-      public_id: imgUpload.public_id,
-      url: imgUpload.secure_url,
+    const product = await Product.create({
+      name,
+      description,
+      price,
+      stock,
+      mrp,
+      weight,
+      flavor,
+      category,
+      brand,
+      isFeatured,
+      isBestSeller,
+      images: imageData,
     });
+
+    return res.status(201).json({
+      success: true,
+      product,
+    });
+  } catch (err) {
+    res.status(500);
+    throw new Error(err.message);
   }
-
-  const product = await Product.create({
-    name,
-    description,
-    price,
-    mrp,
-    category,
-    stock: stock || 0,
-    weight,
-    flavor,
-    brand,
-    isFeatured: isFeatured || false,
-    isBestSeller: isBestSeller || false,
-    images
-  });
-
-  res.status(201).json({
-    success: true,
-    message: "Product created",
-    product,
-  });
 });
 
 //
@@ -132,45 +128,54 @@ export const updateProduct = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
 
-  // Replace image if new one uploaded
-  if (req.file) {
-    for (let img of product.images) {
-      await cloudinary.uploader.destroy(img.public_id);
+  // 🌟 If new images uploaded
+  if (req.files && req.files.length > 0) {
+    // Delete old Cloudinary images
+    for (const img of product.images) {
+      if (img.public_id) {
+        await cloudinary.uploader.destroy(img.public_id);
+      }
     }
 
-    const uploaded = await uploadToCloudinary(
-      req.file.buffer,
-      "hungerbites/products"
+    // Upload new images
+    const newImageData = await uploadMultipleToCloudinary(
+      req.files,
+      "products"
     );
 
-    product.images = [
-      {
-        public_id: uploaded.public_id,
-        url: uploaded.secure_url,
-      },
-    ];
+    product.images = newImageData;
   }
 
+  // Update text values
   const fields = [
-    "name", "description", "price", "mrp",
-    "stock", "category", "flavor", "weight",
-    "brand", "isFeatured", "isBestSeller"
+    "name",
+    "description",
+    "price",
+    "mrp",
+    "stock",
+    "category",
+    "flavor",
+    "weight",
+    "brand",
+    "isFeatured",
+    "isBestSeller",
   ];
 
-  fields.forEach(f => {
-    if (req.body[f] !== undefined) {
-      product[f] = req.body[f];
+  fields.forEach((key) => {
+    if (req.body[key] !== undefined) {
+      product[key] = req.body[key];
     }
   });
 
   await product.save();
 
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
-    message: "Product updated",
+    message: "Product updated successfully",
     product,
   });
 });
+
 
 //
 // ❌ DELETE PRODUCT

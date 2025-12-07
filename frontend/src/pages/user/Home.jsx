@@ -10,7 +10,7 @@ import BestSellers from "../../components/user/BestSellers";
 import LimitedDeals from "../../components/user/LimitedDeals";
 import RecentlyViewed from "../../components/user/RecentlyViewed";
 import ShopByFlavor from "../../components/user/ShopByFlavor";
-import CategorySection from "../../components/user/CategorySection"
+import CategorySection from "../../components/user/CategorySection";
 import WaveSection from "../../components/user/WaveSection";
 import CustomerReviews from "../../components/user/CustomerReviews";
 
@@ -36,25 +36,18 @@ const Home = () => {
     },
   ];
 
-  
-
   return (
     <div className="bg-gray-50 min-h-screen">
-
-      
-      
-<HeroVideoPlayer/>
+      <HeroVideoPlayer />
       {/* PRODUCT SECTIONS */}
       <div className="space-y-24 pb-20">
         <FeaturedProducts />
-        <WaveSection/>
-        <CategorySection/>
+        <WaveSection />
+        <CategorySection />
         <BestSellers />
         <RecentlyViewed />
-        <ShopByFlavor />
-        <CustomerReviews/>
+        <CustomerReviews />
       </div>
-
     </div>
   );
 };
