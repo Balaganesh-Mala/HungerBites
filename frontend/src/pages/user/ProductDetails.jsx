@@ -296,6 +296,47 @@ const ProductDetails = () => {
           </div>
         </div>
       )}
+      {/* ⭐ CUSTOMER REVIEWS SECTION ⭐ */}
+<div className="max-w-6xl mx-auto mt-12 px-6">
+  <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
+
+  {product.reviews?.length === 0 ? (
+    <p className="text-gray-500 text-sm">No reviews yet — be the first to review!</p>
+  ) : (
+    <div className="space-y-4">
+      {product.reviews.map((rev, i) => (
+        <div
+          key={i}
+          className="bg-white p-4 rounded-xl shadow border border-gray-100"
+        >
+          <div className="flex items-center justify-between">
+            <p className="font-semibold text-slate-800">{rev.name}</p>
+          </div>
+
+          {/* ⭐ RATING DISPLAY */}
+          <div className="flex items-center gap-1 mt-1">
+            {[...Array(5)].map((_, idx) => (
+              <FaStar
+                key={idx}
+                className={
+                  idx < rev.rating ? "text-yellow-500" : "text-gray-300"
+                }
+                size={14}
+              />
+            ))}
+            <span className="text-xs text-gray-500 ml-1">
+              {rev.rating} / 5
+            </span>
+          </div>
+
+          {/* COMMENT */}
+          <p className="text-sm text-slate-700 mt-2">{rev.comment}</p>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
     </div>
   );
 };

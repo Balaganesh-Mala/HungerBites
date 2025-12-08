@@ -121,7 +121,7 @@ const Users = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">User Management</h1>
+      <h1 className="text-2xl font-semibold mb-6">Customer Management</h1>
 
       {/* Search + Filters + Export */}
       <div className="flex flex-wrap gap-3 items-end mb-6">

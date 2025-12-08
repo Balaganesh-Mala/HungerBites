@@ -7,7 +7,6 @@ import {
   FiSettings,
   FiTrendingUp,
   FiEdit2,
-  FiFlag
 } from "react-icons/fi";
 import { TbCategory2 } from "react-icons/tb";
 
@@ -20,7 +19,7 @@ const AdminSidebar = ({ open, setOpen }) => {
     { name: "Products", path: "/admin/products", icon: <FiBox /> },
     { name: "Orders", path: "/admin/orders", icon: <FiShoppingBag /> },
     { name: "Categories", path: "/admin/categories", icon: <TbCategory2 /> },
-    { name: "Users", path: "/admin/users", icon: <FiUsers /> },
+    { name: "Customers", path: "/admin/users", icon: <FiUsers /> },
     { name: "Payments", path: "/admin/payments", icon: <FiTrendingUp /> },
     { name: "Blog", path: "/admin/blogs", icon: <FiEdit2/> },
     { name: "Settings", path: "/admin/settings", icon: <FiSettings /> },

@@ -30,3 +30,6 @@ export const updateOrderStatusApi = async (id, status) => {
 export const deleteOrderApi = async (id) => {
   return await api.delete(`/orders/${id}`);
 };
+
+export const trackOrderApi = (trackingId) =>
+  api.get(`/orders/track/${trackingId}`);

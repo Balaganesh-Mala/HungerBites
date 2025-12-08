@@ -213,16 +213,6 @@ export const addReview = asyncHandler(async (req, res) => {
     throw new Error("Product not found");
   }
 
-  // Check if user already reviewed
-  const alreadyReviewed = product.reviews.find(
-    (r) => r.user.toString() === req.user._id.toString()
-  );
-
-  if (alreadyReviewed) {
-    res.status(400);
-    throw new Error("You already reviewed this product");
-  }
-
   // Check if user purchased and delivered
   const deliveredOrder = await Order.findOne({
     user: req.user._id,
@@ -232,7 +222,17 @@ export const addReview = asyncHandler(async (req, res) => {
 
   if (!deliveredOrder) {
     res.status(400);
-    throw new Error("You can review only after the product is delivered");
+    throw new Error("You can review only after delivery");
+  }
+
+  // Check duplicate review
+  const existing = product.reviews.find(
+    (r) => r.user.toString() === req.user._id.toString()
+  );
+
+  if (existing) {
+    res.status(400);
+    throw new Error("You already reviewed this product");
   }
 
   const review = {
@@ -245,7 +245,7 @@ export const addReview = asyncHandler(async (req, res) => {
 
   product.reviews.push(review);
 
-  // Update rating
+  // update rating
   product.numOfReviews = product.reviews.length;
   product.ratings =
     product.reviews.reduce((acc, item) => acc + item.rating, 0) /
@@ -256,7 +256,46 @@ export const addReview = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: "Review added",
-    reviews: product.reviews,
+    product, // 👈 send full product to refresh UI
   });
 });
 
+
+
+export const deleteReview = asyncHandler(async (req, res) => {
+  const { reviewId } = req.params;
+  const { productId } = req.body;
+
+  const product = await Product.findById(productId);
+
+  if (!product) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+  // filter out review
+  const updatedReviews = product.reviews.filter(
+    (rev) => rev._id.toString() !== reviewId
+  );
+
+  if (updatedReviews.length === product.reviews.length) {
+    res.status(400);
+    throw new Error("Review not found");
+  }
+
+  product.reviews = updatedReviews;
+
+  // Update rating + count
+  product.numOfReviews = updatedReviews.length;
+  product.ratings =
+    updatedReviews.reduce((acc, item) => acc + item.rating, 0) /
+    (updatedReviews.length || 1);
+
+  await product.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Review deleted successfully",
+    reviews: product.reviews,
+  });
+});

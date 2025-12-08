@@ -23,18 +23,23 @@ const Payments = () => {
   const perPage = 50;
 
   // Load payments
-  const loadPayments = async () => {
-    try {
-      const res = await adminApi.get("/payment");
+ const loadPayments = async () => {
+  try {
+    const res = await adminApi.get("/payment");
 
-      const sorted = [...res.data.payments].reverse(); // newest first
-      setPayments(sorted);
-      setFiltered(sorted);
-    } catch (err) {
-      Swal.fire("Error", "Failed to load payments", "error");
-    }
-    setLoading(false);
-  };
+    // Sort payments newest → oldest
+    const sorted = [...res.data.payments].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+
+    setPayments(sorted);
+    setFiltered(sorted);
+  } catch (err) {
+    Swal.fire("Error", "Failed to load payments", "error");
+  }
+  setLoading(false);
+};
+
 
   useEffect(() => {
     loadPayments();

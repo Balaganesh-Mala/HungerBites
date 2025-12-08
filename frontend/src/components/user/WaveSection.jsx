@@ -1,8 +1,9 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import React, { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import planet1 from "../../assets/images/image1.png";
-import planet2 from "../../assets/images/image2.png";
+import planet1 from "../../assets/images/image02.png";
+import planet2 from "../../assets/images/image04.png";
 
 import rocket1 from "../../assets/images/rocket1.png";
 import rocket2 from "../../assets/images/rocket2.png";
@@ -13,6 +14,7 @@ import particles from "../../assets/images/particles.png";
 
 const WaveSection = () => {
   const ref = useRef(null);
+  const navigate = useNavigate();
 
   // Scroll animations
   const { scrollYProgress } = useScroll({
@@ -100,6 +102,7 @@ const WaveSection = () => {
           className="relative border border-lime-400 rounded-2xl p-5 cursor-pointer transform-gpu will-change-transform shadow-lg"
           onMouseMove={(e) => handleTilt(e, setTiltLeft)}
           onMouseLeave={() => resetTilt(setTiltLeft)}
+          onClick={() => navigate("/products")}
         >
           <motion.img
             style={tiltLeft}
@@ -113,21 +116,21 @@ const WaveSection = () => {
             style={{ y: rocketY, rotate: rocketRotate }}
             src={rocket1}
             alt=""
-            className="absolute -top-2 right-[50px] w-14 md:w-16 rotate-[-15deg]"
+            className="absolute -top-2 right-[50px] w-12 md:w-10 rotate-[-15deg]"
           />
 
           <motion.img
             style={{ y: rocketY, rotate: rocketRotate }}
             src={rocket3}
             alt=""
-            className="absolute top-32 -left-2 w-24 md:w-28 rotate-[-10deg]"
+            className="absolute top-32 -left-2 w-5 md:w-20 rotate-[-10deg]"
           />
 
           <motion.img
             style={{ y: rocketY, rotate: rocketRotate }}
             src={rocket2}
             alt=""
-            className="absolute -bottom-12 right-12 w-24 md:w-28 rotate-[30deg]"
+            className="absolute -bottom-12 right-12 w-14 md:w-20 rotate-[30deg]"
           />
         </motion.div>
 
@@ -137,6 +140,7 @@ const WaveSection = () => {
           className="relative border border-lime-400 rounded-2xl p-5 cursor-pointer transform-gpu will-change-transform shadow-lg"
           onMouseMove={(e) => handleTilt(e, setTiltRight)}
           onMouseLeave={() => resetTilt(setTiltRight)}
+          onClick={() => navigate("/products")}
         >
           <motion.img
             style={tiltRight}
@@ -150,21 +154,21 @@ const WaveSection = () => {
             style={{ y: rocketY, rotate: rocketRotate }}
             src={rocket2}
             alt=""
-            className="absolute -top-6 left-0 w-[70px] md:w-[90px] rotate-[20deg]"
+            className="absolute -top-6 left-0 w-[20px] md:w-[50px] rotate-[20deg]"
           />
 
           <motion.img
             style={{ y: rocketY, rotate: rocketRotate }}
             src={rocket3}
             alt=""
-            className="absolute bottom-6 right-10 w-20 md:w-24 rotate-[35deg]"
+            className="absolute bottom-6 right-10 w-20 md:w-16 rotate-[35deg]"
           />
 
           <motion.img
             style={{ y: rocketY, rotate: rocketRotate }}
             src={rocket1}
             alt=""
-            className="absolute bottom-14 left-3 w-20 md:w-24 rotate-[-10deg]"
+            className="absolute bottom-14 left-3 w-10 md:w-14 rotate-[-10deg]"
           />
         </motion.div>
 
