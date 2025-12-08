@@ -1,6 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { AdminAuthProvider } from "../context/AdminAuthContext";
+import AdminAuthProvider  from "../context/AdminAuthContext";
 
 import Login from "../pages/admin/Login.jsx";
 import AdminLayout from "../layouts/AdminLayout.jsx";

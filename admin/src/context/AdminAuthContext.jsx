@@ -4,22 +4,24 @@ import axios from "../api/adminAxios";
 
 export const AdminAuthContext = createContext();
 
-export const AdminAuthProvider = ({ children }) => {
+const AdminAuthProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null); // { name, email, role }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = getAdminToken();
     if (token) {
-      // optionally fetch profile
-      axios.get("/auth/profile").then((res) => {
-        setAdmin(res.data.user);
-        setLoading(false);
-      }).catch(() => {
-        clearAdminToken();
-        setAdmin(null);
-        setLoading(false);
-      });
+      axios
+        .get("/auth/profile")
+        .then((res) => {
+          setAdmin(res.data.user);
+          setLoading(false);
+        })
+        .catch(() => {
+          clearAdminToken();
+          setAdmin(null);
+          setLoading(false);
+        });
     } else {
       setLoading(false);
     }
@@ -28,10 +30,12 @@ export const AdminAuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const res = await axios.post("/auth/login", { email, password });
     const token = res.data.token;
+
     saveAdminToken(token);
-    // fetch profile now
+
     const profile = await axios.get("/auth/profile");
     setAdmin(profile.data.user);
+
     return res.data;
   };
 
@@ -46,3 +50,5 @@ export const AdminAuthProvider = ({ children }) => {
     </AdminAuthContext.Provider>
   );
 };
+
+export default AdminAuthProvider;
