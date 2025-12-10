@@ -43,7 +43,6 @@ const ProductCard = ({ product }) => {
       });
 
       navigate("/cart");
-
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -107,10 +106,11 @@ const ProductCard = ({ product }) => {
           >
             <FiShoppingCart size={14} />
           </motion.button>
-
-          <span className="text-xs text-orange-600 font-medium hover:text-orange-700 transition flex items-center">
-            View <FiArrowRight className="ml-1" />
-          </span>
+          <Link to={`/product/${product._id}`}>
+            <span className="text-xs text-orange-600 font-medium hover:text-orange-700 transition flex items-center">
+              View <FiArrowRight className="ml-1" />
+            </span>
+          </Link>
         </div>
       </div>
     </motion.div>

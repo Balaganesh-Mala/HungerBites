@@ -12,6 +12,7 @@ import cartRoutes from "./routes/cart.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
 import blogRoutes from "./routes/blog.routes.js";
+import contactRoutes from "./routes/contact.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import orderRoutes from "./routes/order.routes.js"; // 🆕 Add order routes
 // import categoryRoutes from "./routes/category.routes.js"; // (optional future addition)
@@ -36,7 +37,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/blogs", blogRoutes);
-
+app.use("/api/contact", contactRoutes);
 
 // ✅ Health check route (optional but useful)
 app.get("/", (req, res) => {

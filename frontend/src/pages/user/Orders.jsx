@@ -11,28 +11,27 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // UI States
   const [expandedOrder, setExpandedOrder] = useState(null);
 
   // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  // Track Modal
+  // Tracking UI
   const [trackingModal, setTrackingModal] = useState(false);
   const [trackingData, setTrackingData] = useState(null);
 
-  // Review Modal
+  // Review UI
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewProductId, setReviewProductId] = useState(null);
   const [reviewProductName, setReviewProductName] = useState("");
   const [rating, setRating] = useState("");
   const [comment, setComment] = useState("");
 
-  // Logged user
+  // Detect login user id from token
   const token = localStorage.getItem("token");
   let loggedInUserId = null;
+
   if (token) {
     try {
       const decoded = JSON.parse(atob(token.split(".")[1]));
@@ -40,20 +39,29 @@ const Orders = () => {
     } catch {}
   }
 
-  // Load orders
+  /** ===========================
+   *  FETCH ORDERS
+   * =========================== */
   const loadOrders = async () => {
+    if (!token) {
+      setLoading(false);
+      return; // ❗ STOP API CALL IF NOT LOGGED IN
+    }
+
     try {
       const res = await getMyOrdersApi();
-
       let data = res.data.orders || [];
-      // Sort newest → oldest
-      data = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      data = data.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
 
       setOrders(data);
       setFilteredOrders(data);
-    } catch {
-      Swal.fire("Error", "Failed to load orders", "error");
+    } catch (err) {
+      console.log("Order fetch failed", err);
     }
+
     setLoading(false);
   };
 
@@ -61,7 +69,9 @@ const Orders = () => {
     loadOrders();
   }, []);
 
-  // Tracking
+  /** ===========================
+   * TRACK ORDER
+   * =========================== */
   const trackOrder = async (trackingId) => {
     try {
       const res = await trackOrderApi(trackingId);
@@ -72,69 +82,49 @@ const Orders = () => {
     }
   };
 
-  // Review Modal Open
+  /** ===========================
+   * OPEN REVIEW
+   * =========================== */
   const openReviewModal = (productId, productName) => {
     setReviewProductId(productId);
     setReviewProductName(productName);
     setShowReviewModal(true);
   };
 
-  // Submit Review
+  /** ===========================
+   * SUBMIT REVIEW
+   * =========================== */
   const submitReview = async () => {
-    if (!token) {
-      Swal.fire("Login Required", "Please login first!", "warning");
-      navigate("/login");
-      return;
-    }
-
     if (!rating || !comment) {
-      Swal.fire("Error", "Please fill rating & comment", "error");
-      return;
-    }
-
-    // Delivery validation
-    const allowed = orders.some(
-      (order) =>
-        order.orderStatus === "Delivered" &&
-        order.orderItems?.some(
-          (item) =>
-            String(item.productId?._id || item.productId) ===
-            String(reviewProductId)
-        )
-    );
-
-    if (!allowed) {
-      Swal.fire("Not Allowed", "You can review only after delivery!", "error");
+      Swal.fire("Error", "Please add rating & comment", "error");
       return;
     }
 
     try {
-      await api.post(
-        `/products/${reviewProductId}/review`,
-        { rating: Number(rating), comment },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      Swal.fire("Success!", "Review submitted!", "success").then(() => {
-        setShowReviewModal(false);
-        setRating("");
-        setComment("");
-        loadOrders(); // refresh UI to hide review button
+      await api.post(`/products/${reviewProductId}/review`, {
+        rating: Number(rating),
+        comment,
       });
+
+      Swal.fire("Success!", "Review submitted!", "success");
+
+      setShowReviewModal(false);
+      setRating("");
+      setComment("");
+
+      loadOrders(); // refresh
     } catch (err) {
       Swal.fire(
         "Error",
-        err.response?.data?.message || "Review submission failed",
+        err.response?.data?.message || "Failed to submit review",
         "error"
       );
     }
   };
 
-  // Expand row toggle
-  const toggleExpand = (orderId) =>
-    setExpandedOrder(expandedOrder === orderId ? null : orderId);
-
-  // Search + filter logic
+  /** ===========================
+   * FILTERS
+   * =========================== */
   useEffect(() => {
     let updated = [...orders];
 
@@ -155,14 +145,31 @@ const Orders = () => {
     setFilteredOrders(updated);
   }, [search, statusFilter, orders]);
 
-  const statusColors = {
-    Processing: "bg-orange-100 text-orange-700",
-    Shipped: "bg-blue-100 text-blue-700",
-    Delivered: "bg-green-100 text-green-700",
-    Cancelled: "bg-red-100 text-red-700",
-  };
+  /** ===========================
+   * UNLOGGED USER UI
+   * =========================== */
+  if (!token && !loading) {
+  return (
+    <div className="flex flex-col justify-center items-center py-28">
+      <p className="text-xl text-slate-700 font-medium mb-4">
+        Login to view your orders
+      </p>
 
-  if (loading)
+      <button
+        onClick={() => navigate("/login")}
+        className="bg-orange-600 text-white px-5 py-2 rounded-lg hover:bg-orange-700 transition"
+      >
+        Login to View Orders
+      </button>
+    </div>
+  );
+}
+
+
+  /** ===========================
+   * LOADING UI
+   * =========================== */
+  if (loading) {
     return (
       <div className="flex justify-center items-center py-24">
         <motion.p
@@ -174,11 +181,23 @@ const Orders = () => {
         </motion.p>
       </div>
     );
+  }
+
+  /** ===========================
+   * MAIN UI
+   * =========================== */
+
+  const statusColors = {
+    Processing: "bg-orange-100 text-orange-700",
+    Shipped: "bg-blue-100 text-blue-700",
+    Delivered: "bg-green-100 text-green-700",
+    Cancelled: "bg-red-100 text-red-700",
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
       <div className="max-w-6xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-semibold text-slate-900 mb-10">
+        <h1 className="text-3xl font-semibold text-slate-900 mb-8">
           My Orders
         </h1>
 
@@ -205,16 +224,16 @@ const Orders = () => {
           </select>
         </div>
 
-        {/* Empty State */}
+        {/* Empty */}
         {filteredOrders.length === 0 && (
-          <div className="text-center mt-20">
-            <h2 className="text-xl font-semibold text-slate-700 mt-4">
-              No matching orders found
-            </h2>
+          <div className="text-center mt-10">
+            <p className="text-lg font-medium text-slate-700">
+              No orders found.
+            </p>
           </div>
         )}
 
-        {/* Order Table */}
+        {/* Table */}
         <div className="overflow-x-auto rounded-xl shadow border">
           <table className="min-w-full bg-white text-sm">
             <thead className="bg-gray-100 text-left text-sm text-slate-600 border-b">
@@ -228,20 +247,23 @@ const Orders = () => {
               </tr>
             </thead>
 
-            {/* ONLY ONE tbody */}
             <tbody>
               {filteredOrders.map((order) => (
                 <React.Fragment key={order._id}>
                   <tr
                     className="border-b hover:bg-gray-50 cursor-pointer"
-                    onClick={() => toggleExpand(order._id)}
+                    onClick={() =>
+                      setExpandedOrder(
+                        expandedOrder === order._id ? null : order._id
+                      )
+                    }
                   >
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         <img
                           src={
-                            order.orderItems?.[0]?.productId?.images?.[0]
-                              ?.url || "https://via.placeholder.com/50"
+                            order.orderItems?.[0]?.productId?.images?.[0]?.url ??
+                            "https://via.placeholder.com/50"
                           }
                           className="w-12 h-12 rounded-lg object-cover border"
                           alt="product"
@@ -260,15 +282,7 @@ const Orders = () => {
                       ₹{order.totalPrice}
                     </td>
 
-                    <td className="p-3">
-                      <span className="text-sm font-medium text-slate-700">
-                        {order.paymentMethod === "online"
-                          ? "Online Payment"
-                          : order.paymentMethod === "COD"
-                          ? "Cash on Delivery"
-                          : order.paymentMethod}
-                      </span>
-                    </td>
+                    <td className="p-3">{order.paymentMethod}</td>
 
                     <td className="p-3">
                       <span
@@ -285,7 +299,6 @@ const Orders = () => {
                     </td>
                   </tr>
 
-                  {/* EXPANDED ROW */}
                   <AnimatePresence>
                     {expandedOrder === order._id && (
                       <motion.tr
@@ -311,10 +324,11 @@ const Orders = () => {
                                 <div className="flex gap-3">
                                   <img
                                     src={
-                                      item.productId?.images?.[0]?.url ||
+                                      item.productId?.images?.[0]?.url ??
                                       "https://via.placeholder.com/60"
                                     }
                                     className="w-12 h-12 rounded object-cover"
+                                    alt=""
                                   />
                                   <div>
                                     <p className="font-medium">
@@ -371,69 +385,21 @@ const Orders = () => {
         </div>
       </div>
 
-      {/* TRACKING MODAL */}
-      {trackingModal && (
-        <div
-          className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"
-          onClick={() => setTrackingModal(false)}
-        >
-          <div
-            className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-bold mb-3">Tracking Details</h3>
-
-            <p>
-              <strong>Tracking ID:</strong> {trackingData?.trackingId}
-            </p>
-            <p className="mt-2">
-              <strong>Status:</strong>{" "}
-              <span className="font-semibold text-blue-600">
-                {trackingData?.status}
-              </span>
-            </p>
-
-            <div className="mt-4 border-t pt-3">
-              <h4 className="font-semibold mb-2">History</h4>
-              {trackingData?.history?.length ? (
-                trackingData.history.map((h, i) => (
-                  <div key={i} className="text-sm border-b py-2">
-                    <p>{new Date(h.date).toLocaleString()}</p>
-                    <p>Status: {h.status}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">
-                  No tracking history yet.
-                </p>
-              )}
-            </div>
-
-            <button
-              onClick={() => setTrackingModal(false)}
-              className="mt-4 w-full py-2 bg-gray-300 rounded-lg"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* REVIEW MODAL */}
+      {/* 🔹 REVIEW MODAL */}
       {showReviewModal && (
         <div
           className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"
           onClick={() => setShowReviewModal(false)}
         >
           <div
-            className="bg-white p-6 rounded-xl w-96 shadow-lg animate-scale-in"
+            className="bg-white p-6 rounded-xl w-96 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold mb-3">
               Review: {reviewProductName}
             </h3>
 
-            {/* ⭐ STAR SELECTOR */}
+            {/* STAR SELECTOR */}
             <div className="flex items-center gap-2 mb-3">
               {[1, 2, 3, 4, 5].map((star) => (
                 <svg
@@ -453,7 +419,6 @@ const Orders = () => {
               ))}
             </div>
 
-            {/* RATING DISPLAY */}
             {rating && (
               <p className="text-sm text-slate-600 mb-2">
                 Selected rating: <strong>{rating} star(s)</strong>
@@ -467,7 +432,6 @@ const Orders = () => {
               onChange={(e) => setComment(e.target.value)}
             />
 
-            {/* BUTTONS */}
             <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={() => setShowReviewModal(false)}
@@ -482,6 +446,55 @@ const Orders = () => {
                 Submit
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔹 TRACKING MODAL */}
+      {trackingModal && (
+        <div
+          className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"
+          onClick={() => setTrackingModal(false)}
+        >
+          <div
+            className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold mb-3">Tracking Details</h3>
+
+            <p>
+              <strong>Tracking ID:</strong> {trackingData?.trackingId}
+            </p>
+
+            <p className="mt-2">
+              <strong>Status:</strong>{" "}
+              <span className="font-semibold text-blue-600">
+                {trackingData?.status}
+              </span>
+            </p>
+
+            <div className="mt-4 border-t pt-3">
+              <h4 className="font-semibold mb-2">History</h4>
+              {trackingData?.history?.length ? (
+                trackingData.history.map((h, i) => (
+                  <div key={i} className="text-sm border-b py-2">
+                    <p>{new Date(h.date).toLocaleString()}</p>
+                    <p>Status: {h.status}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No history available.
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={() => setTrackingModal(false)}
+              className="mt-4 w-full py-2 bg-gray-300 rounded-lg"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

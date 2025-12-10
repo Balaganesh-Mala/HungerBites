@@ -13,8 +13,8 @@ import Login from "../pages/user/Login";
 import ForgotPasswordPhone from "../pages/user/ForgotPasswordPhone";
 import AboutUs from "../pages/user/AboutUs";
 import ContactUs from "../pages/user/ContactUs";
+import Policy from "../pages/user/Policy";
 import NotFound from "../pages/user/NotFound";
-
 
 const UserRoutes = () => {
   return (
@@ -28,9 +28,9 @@ const UserRoutes = () => {
         <Route path="/orders" element={<Orders />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/about" element={<AboutUs />} />
-        <Route path="/contact" element={<ContactUs/>}/>
+        <Route path="/contact" element={<ContactUs />} />
         <Route path="/register" element={<RegisterPhone />} />
-
+        <Route path="/privacy-policy" element={<Policy />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPasswordPhone />} />
         <Route path="*" element={<NotFound />} />

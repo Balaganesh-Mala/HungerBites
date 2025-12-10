@@ -114,10 +114,7 @@ const Navbar = () => {
         </button>
       </div>
 
-      {/* Mobile Menu */}
-      {/* Mobile Menu */}
-{/* Mobile Menu */}
-{/* Mobile Menu */}
+      
 {open && (
   <div className="md:hidden bg-white shadow-xl rounded-b-3xl p-6 space-y-6 text-gray-800 font-medium animate-slideDown">
 

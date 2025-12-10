@@ -135,7 +135,7 @@ const Products = () => {
         <main>
           <div className="py-0 mb-10">
             <h1 className="text-3xl font-semibold text-gray-900">
-              Our Collection Of Products
+              Our Products
             </h1>
 
             {/* SEARCH */}
@@ -155,10 +155,7 @@ const Products = () => {
               {products.length} items
             </p>
 
-            <p className="text-gray-600 mt-4 text-sm max-w-xl">
-              Lorem ipsum dolor sit amet consectetur adipiscing elit, sed do
-              eiusmod tempor.
-            </p>
+            
           </div>
 
           {/* PRODUCT GRID USING REUSABLE CARD */}
