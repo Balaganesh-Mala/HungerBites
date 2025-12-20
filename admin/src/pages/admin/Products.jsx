@@ -445,6 +445,7 @@ const Products = () => {
                   name="price"
                   value={form.price}
                   onChange={handleChange}
+                  required
                   placeholder="Price"
                   className="border p-2 rounded"
                 />
@@ -462,6 +463,7 @@ const Products = () => {
                 type="number"
                 name="stock"
                 value={form.stock}
+                required
                 onChange={handleChange}
                 placeholder="Stock"
                 className="border w-full p-2 rounded"
@@ -478,6 +480,7 @@ const Products = () => {
               <input
                 name="weight"
                 value={form.weight}
+                required
                 onChange={handleChange}
                 placeholder="Weight"
                 className="border w-full p-2 rounded"
@@ -486,6 +489,7 @@ const Products = () => {
               <select
                 name="category"
                 value={form.category}
+                required
                 onChange={handleChange}
                 className="border w-full p-2 rounded"
               >
@@ -549,7 +553,7 @@ const Products = () => {
                       type="file"
                       multiple
                       accept="image/*"
-                      className="hidden"
+                      className="hidden" 
                       onChange={handleImageUpload}
                     />
                   </label>

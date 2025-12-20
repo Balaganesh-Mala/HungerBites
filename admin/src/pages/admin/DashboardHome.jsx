@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import adminApi from "../../api/adminAxios";
+import { getAllContactMessagesApi } from "../../api/contact.api";
+import { useAdminNotifications } from "../../context/AdminNotificationContext";
 import {
   LineChart,
   Line,
@@ -20,6 +22,10 @@ const StatCard = ({ title, value, subtitle }) => (
 
 const AdminDashboardHome = () => {
   const [loading, setLoading] = useState(true);
+
+  const { unreadMessages, setUnreadMessages, lastSeenCount, setLastSeenCount } =
+    useAdminNotifications();
+
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalOrders: 0,
@@ -30,6 +36,70 @@ const AdminDashboardHome = () => {
   const [topProducts, setTopProducts] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [error, setError] = useState(null);
+  useEffect(() => {
+    const checkNewMessages = async () => {
+      try {
+        const res = await getAllContactMessagesApi();
+        const total = res.data.messages.length;
+
+        if (total > lastSeenCount) {
+          setUnreadMessages(total - lastSeenCount);
+        }
+      } catch (err) {
+        console.error("Message polling failed");
+      }
+    };
+
+    // initial check
+    checkNewMessages();
+
+    // poll every 20 seconds
+    const interval = setInterval(checkNewMessages, 20000);
+
+    return () => clearInterval(interval);
+  }, [lastSeenCount]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [sRes, rRes, tRes, oRes, mRes] = await Promise.all([
+          adminApi.get("/admin/dashboard"),
+          adminApi.get("/admin/revenue"),
+          adminApi.get("/admin/top-products"),
+          adminApi.get("/admin/orders"),
+          getAllContactMessagesApi(), // ✅ NEW
+        ]);
+
+        setStats(sRes.data.stats || {});
+
+        const rev = (rRes.data.monthlyRevenue || []).map((r) => ({
+          name: r.month,
+          revenue: r.total,
+        }));
+        setRevenueData(rev);
+
+        setTopProducts(tRes.data.topProducts || []);
+        setRecentOrders((oRes.data.orders || []).slice(0, 6));
+
+        // ✅ THIS IS THE FIX
+        const unread = (mRes.data.messages || []).filter(
+          (m) => !m.replied
+        ).length;
+
+        setUnreadMessages(unread);
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            "Failed to load dashboard"
+        );
+      }
+      setLoading(false);
+    };
+
+    load();
+  }, []);
 
   useEffect(() => {
     const load = async () => {

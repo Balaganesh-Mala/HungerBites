@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
+import { useAdminNotifications } from "../../context/AdminNotificationContext";
+
 import {
   getAllContactMessagesApi,
   deleteContactMessageApi,
@@ -10,20 +12,44 @@ const ContactMessages = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
 
+
   const loadMessages = async () => {
     try {
       const res = await getAllContactMessagesApi();
-      setMessages(res.data.messages || []);
+      const msgs = res.data.messages || [];
+
+      setMessages(msgs);
+
+      // ✅ count unread messages
+      const unread = msgs.filter((m) => !m.replied).length;
+      setUnreadMessages(unread);
     } catch (err) {
-      console.error("Message Load Error:", err.response?.data || err);
       Swal.fire("Error", "Failed to load messages", "error");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const {
+  setUnreadMessages,
+  setLastSeenCount,
+} = useAdminNotifications();
+
+
+  useEffect(() => {
+  const loadMessages = async () => {
+    const res = await getAllContactMessagesApi();
+    const msgs = res.data.messages || [];
+    setMessages(msgs);
+
+    // 👇 ADMIN HAS SEEN MESSAGES
+    setUnreadMessages(0);
+    setLastSeenCount(msgs.length);
     setLoading(false);
   };
 
-  useEffect(() => {
-    loadMessages();
-  }, []);
+  loadMessages();
+}, []);
 
   const deleteMessageHandler = async (id) => {
     Swal.fire({

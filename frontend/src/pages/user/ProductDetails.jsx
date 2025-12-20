@@ -5,6 +5,7 @@ import { FaStar, FaArrowLeft } from "react-icons/fa";
 import api from "../../api/axios";
 import { addToCartApi } from "../../api/cart.api";
 import ProductCard from "../../components/user/ProductCard";
+import ProductDescription from "../../components/user/ProductDescription";
 import Swal from "sweetalert2";
 
 const ProductDetails = () => {
@@ -128,6 +129,16 @@ const ProductDetails = () => {
   if (!product)
     return <p className="text-center text-gray-500 py-20">Not found.</p>;
 
+  const getPricePer100g = (price, weight) => {
+    if (!price || !weight) return null;
+
+    // extract number from "150g", "200 g", etc
+    const grams = parseFloat(weight.replace(/[^\d.]/g, ""));
+    if (!grams || grams === 0) return null;
+
+    return ((price / grams) * 100).toFixed(2);
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen pb-20">
       {/* HEADER */}
@@ -144,7 +155,6 @@ const ProductDetails = () => {
       <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* LEFT */}
         <div className="flex flex-col md:flex-row gap-4">
-          
           {/* Thumbnails left in desktop */}
           <div className="hidden md:flex flex-col gap-3">
             {product.images?.map((img, i) => (
@@ -167,7 +177,7 @@ const ProductDetails = () => {
             <img
               src={product.images?.[selectedImage]?.url}
               alt={product.name}
-              className="object-cover w-full h-96 transform transition duration-300 group-hover:scale-125"
+              className="object-cover w-full h-full min-h-96 transform transition duration-300 group-hover:scale-125"
             />
           </div>
 
@@ -193,21 +203,35 @@ const ProductDetails = () => {
         <div>
           <h2 className="text-3xl font-semibold mb-2">{product.name}</h2>
 
-          <p className="text-slate-500 mb-3">
-            {product.description?.slice(0, 250) || ""}
-          </p>
-
           <div className="space-y-1 text-sm text-slate-700">
-            <p><strong>Flavor:</strong> {product.flavor || "N/A"}</p>
-            <p><strong>Brand:</strong> {product.brand}</p>
-            <p><strong>Weight:</strong> {product.weight}</p>
+            <p>
+              <strong>Flavor:</strong> {product.flavor || "N/A"}
+            </p>
+            <p>
+              <strong>Brand:</strong> {product.brand}
+            </p>
+            <p>
+              <strong>Weight:</strong> {product.weight}
+            </p>
+
+            {/* PRICE PER 100g */}
+            {getPricePer100g(product.price, product.weight) && (
+              <p className="text-sm text-slate-500">
+                ₹{getPricePer100g(product.price, product.weight)} / 100g
+              </p>
+            )}
           </div>
+          <ProductDescription text={product.description} />
 
           {/* PRICE */}
           <div className="flex items-center gap-4 mt-4">
-            <p className="text-3xl font-bold text-orange-600">₹{product.price}</p>
+            <p className="text-3xl font-bold text-orange-600">
+              ₹{product.price}
+            </p>
             {product.mrp > 0 && (
-              <p className="line-through text-slate-400 text-lg">₹{product.mrp}</p>
+              <p className="line-through text-slate-400 text-lg">
+                ₹{product.mrp}
+              </p>
             )}
           </div>
 
@@ -216,7 +240,7 @@ const ProductDetails = () => {
             {[...Array(5)].map((_, i) => (
               <FaStar
                 key={i}
-                size={22}
+                size={13}
                 className={
                   i < Math.round(product?.ratings || 0)
                     ? "text-yellow-500"
@@ -297,46 +321,47 @@ const ProductDetails = () => {
         </div>
       )}
       {/* ⭐ CUSTOMER REVIEWS SECTION ⭐ */}
-<div className="max-w-6xl mx-auto mt-12 px-6">
-  <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
+      <div className="max-w-6xl mx-auto mt-12 px-6">
+        <h3 className="text-xl font-semibold mb-4">Customer Reviews</h3>
 
-  {product.reviews?.length === 0 ? (
-    <p className="text-gray-500 text-sm">No reviews yet — be the first to review!</p>
-  ) : (
-    <div className="space-y-4">
-      {product.reviews.map((rev, i) => (
-        <div
-          key={i}
-          className="bg-white p-4 rounded-xl shadow border border-gray-100"
-        >
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-slate-800">{rev.name}</p>
-          </div>
+        {product.reviews?.length === 0 ? (
+          <p className="text-gray-500 text-sm">
+            No reviews yet — be the first to review!
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {product.reviews.map((rev, i) => (
+              <div
+                key={i}
+                className="bg-white p-4 rounded-xl shadow border border-gray-100"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-slate-800">{rev.name}</p>
+                </div>
 
-          {/* ⭐ RATING DISPLAY */}
-          <div className="flex items-center gap-1 mt-1">
-            {[...Array(5)].map((_, idx) => (
-              <FaStar
-                key={idx}
-                className={
-                  idx < rev.rating ? "text-yellow-500" : "text-gray-300"
-                }
-                size={14}
-              />
+                {/* ⭐ RATING DISPLAY */}
+                <div className="flex items-center gap-1 mt-1">
+                  {[...Array(5)].map((_, idx) => (
+                    <FaStar
+                      key={idx}
+                      className={
+                        idx < rev.rating ? "text-yellow-500" : "text-gray-300"
+                      }
+                      size={14}
+                    />
+                  ))}
+                  <span className="text-xs text-gray-500 ml-1">
+                    {rev.rating} / 5
+                  </span>
+                </div>
+
+                {/* COMMENT */}
+                <p className="text-sm text-slate-700 mt-2">{rev.comment}</p>
+              </div>
             ))}
-            <span className="text-xs text-gray-500 ml-1">
-              {rev.rating} / 5
-            </span>
           </div>
-
-          {/* COMMENT */}
-          <p className="text-sm text-slate-700 mt-2">{rev.comment}</p>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
-
+        )}
+      </div>
     </div>
   );
 };

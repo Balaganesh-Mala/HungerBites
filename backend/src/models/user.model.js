@@ -12,8 +12,8 @@ const userSchema = new mongoose.Schema(
 
     email: {
       type: String,
+      required: true,
       unique: true,
-      sparse: true, // allows null values without conflict
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, "Invalid email format"],
@@ -21,21 +21,14 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
+      required: true,
       minlength: 6,
-      select: false, // never returned unless manually selected
+      select: false,
     },
 
     phone: {
       type: String,
-      unique: true,
-      sparse: true, // allows phone to be optional
-      trim: true,
-    },
-
-    authProvider: {
-      type: String,
-      enum: ["email", "phone"],
-      default: "email",
+      trim: true, // optional now
     },
 
     role: {
@@ -69,19 +62,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-//
-// 🔐 Ensure either email OR phone exists
-//
-userSchema.pre("save", function (next) {
-  if (!this.email && !this.phone) {
-    return next(new Error("Either email or phone must be provided"));
-  }
-  next();
-});
-
-//
-// 🔑 Hash password before saving / resetting
-//
+// 🔐 Hash password
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
@@ -89,16 +70,12 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-//
-// 🔍 Compare entered password with stored hashed password
-//
+// 🔍 Compare password
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+  return bcrypt.compare(enteredPassword, this.password);
 };
 
-//
-// 🔐 Generate JWT auth token
-//
+// 🔐 JWT
 userSchema.methods.generateAuthToken = function () {
   return jwt.sign(
     { id: this._id, role: this.role },

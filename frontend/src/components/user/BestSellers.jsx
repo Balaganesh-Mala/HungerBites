@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/axios";
 import { motion } from "framer-motion";
-import { FiShoppingCart, FiArrowRight } from "react-icons/fi";
+import { FiArrowRight } from "react-icons/fi";
 import ProductCard from "../../components/user/ProductCard";
 
 const BestSellers = () => {
@@ -26,7 +26,7 @@ const BestSellers = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center items-center py-24">
+      <div className="flex justify-center items-center py-10">
         <motion.p
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{ repeat: Infinity, duration: 1.5 }}
@@ -45,10 +45,10 @@ const BestSellers = () => {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
       viewport={{ once: true }}
-      className="max-w-6xl mx-auto px-5 sm:px-6 py-20"
+      className="max-w-6xl mx-auto px-5 sm:px-6 pt-0 pb-0"
     >
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end mb-12 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end mb-10 gap-4">
         <div className="text-center sm:text-left">
           <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight">
             Best Sellers <span className="text-orange-600">🔥</span>
@@ -68,8 +68,14 @@ const BestSellers = () => {
         </Link>
       </div>
 
-      {/* PRODUCT GRID WITH STAGGER */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+      {/* PRODUCT GRID */}
+      <div
+        className={`grid gap-6 ${
+          products.length < 4
+            ? "grid-cols-2 sm:grid-cols-3 justify-center"
+            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+        }`}
+      >
         {products.slice(0, 8).map((product) => (
           <ProductCard key={product._id} product={product} />
         ))}

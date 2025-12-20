@@ -16,6 +16,7 @@ import { getPublicSettings } from "../../api/settings.api";
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [logo, setLogo] = useState(null);
+  const [storeName, setStoreName] = useState(null);
   const cartCount = useCartCount();
   const location = useLocation(); //  Detect current route
 
@@ -27,7 +28,9 @@ const Navbar = () => {
       try {
         const res = await getPublicSettings();
         const logoUrl = res.data.settings?.logo?.[0]?.url;
-        console.log("Loaded Logo URL:", res.data);
+        const storename = res.data.settings?.storeName;
+        
+        setStoreName(storename);
         setLogo(logoUrl);
       } catch (err) {
         console.log("Settings Load Error:", err);
@@ -40,19 +43,29 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
       <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-
         {/* Logo */}
-        <Link to="/" className="text-2xl font-semibold text-gray-900">
-          <img src={logo} alt="Hunger Bites Logo" className="h-10" />
-        </Link>
+        <div>
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-gray-900 hover:opacity-90 transition"
+          >
+            <img
+              src={logo}
+              alt="Hunger Bites Logo"
+              className="h-10 w-auto object-contain"
+            />
+            <h1 className="text-xl font-bold tracking-tight">{storeName}</h1>
+          </Link>
+        </div>
 
         {/* Desktop Menu */}
         <div className="hidden md:flex gap-8 text-gray-700 font-medium">
-
           <Link
             to="/"
             className={`pb-1 hover:text-orange-700 ${
-              isActive("/") ? "border-b-2 border-orange-600 text-orange-700" : ""
+              isActive("/")
+                ? "border-b-2 border-orange-600 text-orange-700"
+                : ""
             }`}
           >
             Home
@@ -114,77 +127,80 @@ const Navbar = () => {
         </button>
       </div>
 
-      
-{open && (
-  <div className="md:hidden bg-white shadow-xl rounded-b-3xl p-6 space-y-6 text-gray-800 font-medium animate-slideDown">
+      {open && (
+        <div className="md:hidden bg-white shadow-xl rounded-b-3xl p-6 space-y-6 text-gray-800 font-medium animate-slideDown">
+          <Link
+            to="/"
+            onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 text-lg ${
+              isActive("/") ? "text-orange-600 font-semibold" : "text-gray-700"
+            }`}
+          >
+            <FiHome size={20} />
+            Home
+          </Link>
 
-    <Link
-      to="/"
-      onClick={() => setOpen(false)}
-      className={`flex items-center gap-3 text-lg ${
-        isActive("/") ? "text-orange-600 font-semibold" : "text-gray-700"
-      }`}
-    >
-      <FiHome size={20} />
-      Home
-    </Link>
+          <Link
+            to="/products"
+            onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 text-lg ${
+              isActive("/products")
+                ? "text-orange-600 font-semibold"
+                : "text-gray-700"
+            }`}
+          >
+            <FiBox size={20} />
+            Products
+          </Link>
 
-    <Link
-      to="/products"
-      onClick={() => setOpen(false)}
-      className={`flex items-center gap-3 text-lg ${
-        isActive("/products") ? "text-orange-600 font-semibold" : "text-gray-700"
-      }`}
-    >
-      <FiBox size={20} />
-      Products
-    </Link>
+          <Link
+            to="/orders"
+            onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 text-lg ${
+              isActive("/orders")
+                ? "text-orange-600 font-semibold"
+                : "text-gray-700"
+            }`}
+          >
+            <FiClipboard size={20} />
+            Orders
+          </Link>
 
-    <Link
-      to="/orders"
-      onClick={() => setOpen(false)}
-      className={`flex items-center gap-3 text-lg ${
-        isActive("/orders") ? "text-orange-600 font-semibold" : "text-gray-700"
-      }`}
-    >
-      <FiClipboard size={20} />
-      Orders
-    </Link>
+          <Link
+            to="/profile"
+            onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 text-lg ${
+              isActive("/profile")
+                ? "text-orange-600 font-semibold"
+                : "text-gray-700"
+            }`}
+          >
+            <FiUser size={20} />
+            Profile
+          </Link>
 
-    <Link
-      to="/profile"
-      onClick={() => setOpen(false)}
-      className={`flex items-center gap-3 text-lg ${
-        isActive("/profile") ? "text-orange-600 font-semibold" : "text-gray-700"
-      }`}
-    >
-      <FiUser size={20} />
-      Profile
-    </Link>
+          <Link
+            to="/cart"
+            onClick={() => setOpen(false)}
+            className={`flex items-center justify-between text-lg ${
+              isActive("/cart")
+                ? "text-orange-600 font-semibold"
+                : "text-gray-700"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <FiShoppingCart size={20} />
+              Cart
+            </div>
 
-    <Link
-      to="/cart"
-      onClick={() => setOpen(false)}
-      className={`flex items-center justify-between text-lg ${
-        isActive("/cart") ? "text-orange-600 font-semibold" : "text-gray-700"
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        <FiShoppingCart size={20} />
-        Cart
-      </div>
-
-      {cartCount > 0 && (
-        <span className="bg-orange-600 text-white text-xs px-2 py-0.5 rounded-full">
-          {cartCount}
-        </span>
+            {cartCount > 0 && (
+              <span className="bg-orange-600 text-white text-xs px-2 py-0.5 rounded-full">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+        </div>
       )}
-    </Link>
-
-  </div>
-)}
-
-
     </nav>
   );
 };

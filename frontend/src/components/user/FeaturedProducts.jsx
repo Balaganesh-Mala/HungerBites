@@ -9,9 +9,8 @@ const FeaturedProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Add your reusable Add to Cart handler
   const handleAddToCart = (product) => {
-    alert(`Added to cart: ${product.name}`); // You can replace with real cart logic later
+    alert(`Added to cart: ${product.name}`);
   };
 
   const loadFeatured = async () => {
@@ -31,7 +30,7 @@ const FeaturedProducts = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-24">
+      <div className="flex justify-center items-center py-10">
         <motion.p
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{ repeat: Infinity, duration: 1.5 }}
@@ -51,10 +50,10 @@ const FeaturedProducts = () => {
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
       viewport={{ once: true }}
-      className="max-w-6xl mx-auto px-4 sm:px-6 py-20"
+      className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-5"
     >
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end mb-12 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end mb-10 gap-4">
         <div className="text-center sm:text-left">
           <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
             Featured Products <span className="text-orange-600">✨</span>
@@ -74,12 +73,18 @@ const FeaturedProducts = () => {
       </div>
 
       {/* ✅ PRODUCT GRID */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+      <div
+        className={`grid gap-6 ${
+          products.length < 4
+            ? "grid-cols-2 sm:grid-cols-3 justify-center"
+            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
+        }`}
+      >
         {products.slice(0, 8).map((product) => (
           <ProductCard
             key={product._id}
             product={product}
-            onAddToCart={handleAddToCart} // ✅ Corrected handler
+            onAddToCart={handleAddToCart}
           />
         ))}
       </div>

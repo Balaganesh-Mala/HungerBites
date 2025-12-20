@@ -1,4 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
+import { useAdminNotifications } from "../../context/AdminNotificationContext";
+
 import {
   FiHome,
   FiBox,
@@ -11,9 +13,10 @@ import {
 } from "react-icons/fi";
 import { TbCategory2 } from "react-icons/tb";
 
-
 const AdminSidebar = ({ open, setOpen }) => {
   const location = useLocation();
+  const { unreadMessages } = useAdminNotifications();
+
 
   const menuItems = [
     { name: "Dashboard", path: "/admin/dashboard", icon: <FiHome /> },
@@ -22,10 +25,11 @@ const AdminSidebar = ({ open, setOpen }) => {
     { name: "Categories", path: "/admin/categories", icon: <TbCategory2 /> },
     { name: "Customers", path: "/admin/users", icon: <FiUsers /> },
     { name: "Payments", path: "/admin/payments", icon: <FiTrendingUp /> },
-    { name: "Blog", path: "/admin/blogs", icon: <FiEdit2/> },
+    { name: "Blog", path: "/admin/blogs", icon: <FiEdit2 /> },
     { name: "Messages", path: "/admin/messages", icon: <FiMessageCircle /> },
     { name: "Settings", path: "/admin/settings", icon: <FiSettings /> },
   ];
+
 
   return (
     <>
@@ -69,8 +73,21 @@ const AdminSidebar = ({ open, setOpen }) => {
                   }
                 `}
               >
-                <span className="text-lg">{item.icon}</span>
-                {item.name}
+                <span className="relative text-lg">
+                  {item.icon}
+
+                  {item.name === "Messages" && unreadMessages > 0 && (
+                    <span
+                      className="absolute -top-2 -right-2 min-w-[18px] h-[18px]
+                     bg-red-600 text-white text-[10px]
+                     rounded-full flex items-center justify-center"
+                    >
+                      {unreadMessages}
+                    </span>
+                  )}
+                </span>
+
+                <span>{item.name}</span>
               </Link>
             );
           })}

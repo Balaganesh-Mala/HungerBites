@@ -75,14 +75,14 @@ const Login = () => {
           />
 
           {/* Forgot Password */}
-          <div className="text-right text-sm mb-2">
+          {/*<div className="text-right text-sm mb-2">
             <span
               className="text-orange-600 cursor-pointer hover:underline"
               onClick={() => navigate("/forgot-password")}
             >
               Forgot Password?
             </span>
-          </div>
+          </div>*/}
 
           {/* Login Btn */}
           <button
