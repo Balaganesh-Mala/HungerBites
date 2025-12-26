@@ -5,6 +5,9 @@ import crypto from "crypto";
 import Payment from "../models/payment.model.js";
 import Order from "../models/order.model.js";
 import dotenv from "dotenv";
+import Cart from "../models/cart.model.js";
+import { buildFinalOrderItems } from "../utils/order.utils.js";
+
 
 dotenv.config();
 
@@ -51,75 +54,59 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     razorpay_order_id,
     razorpay_payment_id,
     razorpay_signature,
-    orderId,
-    amount,
+    orderData,
   } = req.body;
 
-  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-    res.status(400);
-    throw new Error("Missing payment data");
-  }
-
-  // 1️⃣ Verify Signature
-  const expectedSignature = crypto
+  const expected = crypto
     .createHmac("sha256", process.env.RAZORPAY_SECRET)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest("hex");
 
-  if (expectedSignature !== razorpay_signature) {
-    res.status(400);
-    throw new Error("Invalid signature. Payment verification failed.");
+  if (expected !== razorpay_signature) {
+    throw new Error("Invalid payment signature");
   }
 
-  // 2️⃣ Save Payment record
-  const payment = await Payment.create({
+  // ✅ NOW payment is confirmed
+  const { finalOrderItems, itemsPrice } =
+    await buildFinalOrderItems(orderData.orderItems);
+
+  const order = await Order.create({
     user: req.user._id,
-    razorpay_order_id,
-    razorpay_payment_id,
-    razorpay_signature,
-    amount: amount / 100,      // convert from paisa to INR
-    status: "paid",
-  });
-
-  // 3️⃣ Update related Order (payment status + stock)
-  if (orderId) {
-    const order = await Order.findById(orderId);
-
-    if (!order) {
-      res.status(404);
-      throw new Error("Order not found for this payment");
-    }
-
-    // Update order payment details
-    order.paymentStatus = "Paid";
-    order.paymentMethod = "online";  // 👈 must match enum
-    order.paymentInfo = {
+    orderItems: finalOrderItems,
+    itemsPrice,
+    totalPrice: orderData.totalPrice,
+    shippingAddress: orderData.shippingAddress,
+    paymentMethod: "online",
+    paymentStatus: "Paid",
+    orderStatus: "Processing",
+    paymentInfo: {
       id: razorpay_payment_id,
       status: "Paid",
       method: "Razorpay",
-    };
+    },
+  });
 
-    // Reduce stock for ordered products
-    const bulkOps = order.orderItems.map((it) => ({
-      updateOne: {
-        filter: { _id: it.productId },
-        update: { $inc: { stock: -it.quantity } },
-      },
-    }));
+  // Reduce stock
+  const bulkOps = finalOrderItems.map((item) => ({
+    updateOne: {
+      filter: { _id: item.productId },
+      update: { $inc: { stock: -item.quantity } },
+    },
+  }));
 
-    if (bulkOps.length > 0) {
-      await Product.bulkWrite(bulkOps);
-    }
+  await Product.bulkWrite(bulkOps);
 
-    await order.save();
-  }
+  // Clear cart
+  await Cart.deleteOne({ user: req.user._id });
 
-  return res.status(200).json({
+  res.status(201).json({
     success: true,
-    message: "Payment verified successfully",
-    payment,
+    message: "Payment successful, order created",
+    order,
   });
 });
+
+
 
 
 //
@@ -160,3 +147,31 @@ export const getAllPayments = asyncHandler(async (req, res) => {
 
   res.status(200).json({ success: true, payments });
 });
+
+export const initiateOnlinePayment = asyncHandler(async (req, res) => {
+  const { orderItems, totalPrice, shippingAddress } = req.body;
+
+  // Validate items but DO NOT create order
+  await buildFinalOrderItems(orderItems);
+
+  const razorpayOrder = await razorpay.orders.create({
+    amount: totalPrice * 100,
+    currency: "INR",
+    receipt: `rcpt_${Date.now()}`,
+  });
+
+  res.status(200).json({
+    success: true,
+    razorpayOrderId: razorpayOrder.id,
+    amount: razorpayOrder.amount,
+
+    // Send order data back (frontend will resend on verify)
+    orderData: {
+      orderItems,
+      totalPrice,
+      shippingAddress,
+    },
+  });
+});
+
+

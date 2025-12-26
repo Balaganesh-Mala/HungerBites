@@ -12,6 +12,7 @@ const Checkout = () => {
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   const [address, setAddress] = useState({
     name: "",
@@ -85,7 +86,6 @@ const Checkout = () => {
       }
 
       Swal.fire("Order Placed!", "Your COD order was successful.", "success");
-
       navigate("/orders");
     } catch (err) {
       Swal.fire(
@@ -108,62 +108,81 @@ const Checkout = () => {
 
   // 🟧 Online Payment
   const placeOnlineOrder = async () => {
-    const orderData = buildOrderData();
+    try {
+      const orderData = buildOrderData();
 
-    const loaded = await loadRazorpay(
-      "https://checkout.razorpay.com/v1/checkout.js"
-    );
-    if (!loaded) {
-      return Swal.fire("Error", "Failed to load Razorpay SDK", "error");
-    }
+      const loaded = await loadRazorpay(
+        "https://checkout.razorpay.com/v1/checkout.js"
+      );
 
-    // Step 1: ask backend to create Razorpay Order
-    const res = await api.post("/orders", orderData);
-    const { razorpayOrderId, amount, orderId } = res.data;
+      if (!loaded) {
+        Swal.fire("Error", "Failed to load Razorpay SDK", "error");
+        return;
+      }
 
-    // Step 2: open Razorpay UI
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount,
-      currency: "INR",
-      name: "Hunger Bites",
-      description: "Order Payment",
-      order_id: razorpayOrderId,
+      const res = await api.post("/payment/initiate", orderData);
+      const { razorpayOrderId, amount } = res.data;
 
-      handler: async (response) => {
-        try {
-          await api.post("/payment/verify", {
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-            amount,
-            orderId,
-          });
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount,
+        currency: "INR",
+        name: "Hunger Bites",
+        description: "Order Payment",
+        order_id: razorpayOrderId,
 
-          if (!buyNowData?.buyNow) {
-            await clearCartApi();
+        handler: async (response) => {
+          try {
+            // ⏳ show loader while verifying
+            setPlacingOrder(true);
+
+            await api.post("/payment/verify", {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              orderData,
+            });
+
+            if (!buyNowData?.buyNow) {
+              await clearCartApi();
+            }
+
+            Swal.fire("Success", "Payment completed!", "success");
+            navigate("/orders");
+          } catch (err) {
+            Swal.fire("Error", "Payment verification failed", "error");
+          } finally {
+            setPlacingOrder(false);
           }
+        },
 
-          Swal.fire("Success", "Payment completed!", "success");
-          navigate("/orders");
-        } catch (err) {
-          console.log("Payment verify failed", err);
-          Swal.fire("Error", "Payment verification failed", "error");
-        }
-      },
+        modal: {
+          ondismiss: () => {
+            // 👈 user closed Razorpay popup
+            setPlacingOrder(false);
+          },
+        },
 
-      prefill: {
-        name: address.name,
-        contact: address.phone,
-      },
+        prefill: {
+          name: address.name,
+          contact: address.phone,
+        },
 
-      theme: { color: "#ff6600" },
-    };
+        theme: { color: "#ff6600" },
+      };
 
-    new window.Razorpay(options).open();
+      new window.Razorpay(options).open();
+    } catch (err) {
+      Swal.fire(
+        "Error",
+        err.response?.data?.message || "Online payment failed",
+        "error"
+      );
+      setPlacingOrder(false);
+    }
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!address.name || !address.phone || !address.city || !address.pincode) {
       return Swal.fire(
         "Incomplete Address",
@@ -172,8 +191,26 @@ const Checkout = () => {
       );
     }
 
-    if (paymentMethod === "COD") placeCODOrder();
-    else placeOnlineOrder();
+    // 📞 Phone number validation
+    if (!/^[6-9]\d{9}$/.test(address.phone)) {
+      return Swal.fire(
+        "Invalid Phone Number",
+        "Please enter a valid 10-digit mobile number",
+        "error"
+      );
+    }
+
+    if (placingOrder) return;
+
+    setPlacingOrder(true);
+
+    if (paymentMethod === "COD") {
+      await placeCODOrder();
+    } else {
+      await placeOnlineOrder();
+    }
+
+    setPlacingOrder(false);
   };
 
   if (loading) return <p className="text-center py-20">Loading...</p>;
@@ -191,13 +228,21 @@ const Checkout = () => {
             {Object.keys(address).map((key) => (
               <input
                 key={key}
-                type="text"
+                type={key === "phone" ? "tel" : "text"}
                 placeholder={key.toUpperCase()}
                 className="border p-3 rounded"
                 value={address[key]}
-                onChange={(e) =>
-                  setAddress({ ...address, [key]: e.target.value })
-                }
+                maxLength={key === "phone" ? 10 : undefined}
+                onChange={(e) => {
+                  let value = e.target.value;
+
+                  // 📞 Allow only digits for phone
+                  if (key === "phone") {
+                    value = value.replace(/\D/g, ""); // remove non-numbers
+                  }
+
+                  setAddress({ ...address, [key]: value });
+                }}
               />
             ))}
           </div>
@@ -250,9 +295,22 @@ const Checkout = () => {
 
           <button
             onClick={handlePlaceOrder}
-            className="w-full mt-6 bg-orange-600 hover:bg-orange-700 text-white py-3 rounded-xl"
+            disabled={placingOrder}
+            className={`w-full mt-6 py-3 rounded-xl text-white flex items-center justify-center gap-2
+    ${
+      placingOrder
+        ? "bg-gray-400 cursor-not-allowed"
+        : "bg-orange-600 hover:bg-orange-700"
+    }`}
           >
-            Place Order
+            {placingOrder ? (
+              <>
+                <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+                Processing...
+              </>
+            ) : (
+              "Place Order"
+            )}
           </button>
         </div>
       </div>

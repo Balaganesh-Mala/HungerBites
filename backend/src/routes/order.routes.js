@@ -1,7 +1,7 @@
 import express from "express";
 import {
   createOrder,
-  verifyPayment,
+ 
   getAllOrders,
   getUserOrders,
   updateOrderStatus,
@@ -16,7 +16,7 @@ const router = express.Router();
 
 // User routes
 router.post("/", protect, createOrder);
-router.post("/verify", protect, verifyPayment);
+
 router.get("/my-orders", protect, getUserOrders);
 router.get("/track/:trackingId", protect, getTrackingDetails);
 

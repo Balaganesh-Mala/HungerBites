@@ -5,6 +5,7 @@ import {
   recordFailedPayment,
   getUserPayments,
   getAllPayments,
+  initiateOnlinePayment,
 } from "../controllers/payment.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import { isAdmin } from "../middleware/admin.middleware.js";
@@ -16,6 +17,8 @@ router.post("/create-order", protect, createPaymentOrder);
 router.post("/verify", protect, verifyPayment);
 router.post("/failed", protect, recordFailedPayment);
 router.get("/my-payments", protect, getUserPayments);
+router.post("/initiate", protect, initiateOnlinePayment);
+
 
 // Admin routes
 router.get("/", protect, isAdmin, getAllPayments);
