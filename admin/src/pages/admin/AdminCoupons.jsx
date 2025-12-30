@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import adminApi from "../../api/adminAxios";
 import Swal from "sweetalert2";
+import TableSkeleton from "../../components/admin/TableSkeleton";
 
 const AdminCoupons = () => {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const [form, setForm] = useState({
     code: "",
@@ -109,114 +111,189 @@ const AdminCoupons = () => {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Coupon Manager</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Coupon Manager</h1>
+          <p className="text-sm text-gray-500">
+            Create & manage discount coupons for checkout
+          </p>
+        </div>
+
         <button
           onClick={() => setShowModal(true)}
-          className="bg-orange-600 text-white px-4 py-2 rounded-lg"
+          className="bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow"
         >
-          + Add Coupon
+          + Create Coupon
         </button>
       </div>
 
       {/* ================= TABLE ================= */}
-      <div className="bg-white p-4 rounded-xl shadow overflow-x-auto">
-        {loading ? (
-          <p className="text-center py-6">Loading coupons...</p>
-        ) : coupons.length === 0 ? (
-          <p className="text-center py-6 text-gray-500">
-            No coupons created yet
-          </p>
-        ) : (
-          <table className="w-full text-left min-w-[900px]">
-            <thead>
-              <tr className="border-b text-gray-600">
-                <th className="py-3">Code</th>
-                <th>Type</th>
-                <th>Value</th>
-                <th>Min Cart</th>
-                <th>Max Discount</th>
-                <th>Expiry</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
+      <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto">
+  {loading ? (
+    <div className="p-6">
+      <TableSkeleton />
+    </div>
+  ) : coupons.length === 0 ? (
+    <div className="py-14 text-center">
+      <p className="text-gray-500 text-sm">
+        No coupons created yet
+      </p>
+      <p className="text-xs text-gray-400 mt-1">
+        Create your first coupon to boost conversions
+      </p>
+    </div>
+  ) : (
+    <table className="w-full min-w-[900px] text-sm border-collapse">
+      {/* TABLE HEAD */}
+      <thead className="bg-gray-50 border-b sticky top-0 z-10">
+        <tr className="text-gray-600 text-left">
+          <th className="px-4 py-3">Code</th>
+          <th className="px-4 py-3">Type</th>
+          <th className="px-4 py-3">Value</th>
+          <th className="px-4 py-3">Min Cart</th>
+          <th className="px-4 py-3">Max Discount</th>
+          <th className="px-4 py-3">Expiry</th>
+          <th className="px-4 py-3">Status</th>
+          <th className="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
 
-            <tbody>
-              {coupons.map((c) => (
-                <tr key={c._id} className="border-b hover:bg-gray-50">
-                  <td className="font-semibold">{c.code}</td>
-                  <td>{c.type}</td>
-                  <td>
-                    {c.type === "PERCENT" ? `${c.value}%` : `₹${c.value}`}
-                  </td>
-                  <td>₹{c.minCartValue}</td>
-                  <td>{c.maxDiscount ? `₹${c.maxDiscount}` : "-"}</td>
-                  <td>{new Date(c.expiry).toLocaleDateString()}</td>
-                  <td>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs ${
-                        c.isActive
-                          ? "bg-green-100 text-green-600"
-                          : "bg-gray-200 text-gray-600"
-                      }`}
-                    >
-                      {c.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
+      {/* TABLE BODY */}
+      <tbody>
+        {coupons.map((c) => {
+          const isExpired = new Date(c.expiry) < new Date();
 
-                  <td className="text-right space-x-2">
-                    <button
-                      onClick={() => toggleStatus(c._id, c.isActive)}
-                      className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
-                    >
-                      {c.isActive ? "Disable" : "Enable"}
-                    </button>
+          return (
+            <tr
+              key={c._id}
+              className="border-b hover:bg-gray-50 transition align-middle"
+            >
+              {/* CODE */}
+              <td className="px-4 py-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 text-gray-800 font-semibold tracking-wide">
+                  {c.code}
+                </span>
+              </td>
 
-                    <button
-                      onClick={() => deleteCoupon(c._id)}
-                      className="px-3 py-1 bg-red-500 text-white rounded text-sm"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              {/* TYPE */}
+              <td className="px-4 py-3">
+                <span
+                  className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                    c.type === "PERCENT"
+                      ? "bg-indigo-100 text-indigo-700"
+                      : "bg-orange-100 text-orange-700"
+                  }`}
+                >
+                  {c.type === "PERCENT" ? "Percent" : "Flat"}
+                </span>
+              </td>
+
+              {/* VALUE */}
+              <td className="px-4 py-3 font-semibold text-gray-900">
+                {c.type === "PERCENT" ? `${c.value}%` : `₹${c.value}`}
+              </td>
+
+              {/* MIN CART */}
+              <td className="px-4 py-3 text-gray-700">
+                ₹{c.minCartValue}
+              </td>
+
+              {/* MAX DISCOUNT */}
+              <td className="px-4 py-3 text-gray-700">
+                {c.maxDiscount ? `₹${c.maxDiscount}` : "—"}
+              </td>
+
+              {/* EXPIRY */}
+              <td className="px-4 py-3">
+                <span
+                  className={`text-xs font-medium ${
+                    isExpired ? "text-red-600" : "text-gray-700"
+                  }`}
+                >
+                  {new Date(c.expiry).toLocaleDateString()}
+                </span>
+              </td>
+
+              {/* STATUS */}
+              <td className="px-4 py-3">
+                <span
+                  className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                    c.isActive
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {c.isActive ? "Active" : "Inactive"}
+                </span>
+              </td>
+
+              {/* ACTIONS */}
+              <td className="px-4 py-3 text-right">
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    onClick={() => toggleStatus(c._id, c.isActive)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      c.isActive
+                        ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                        : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    }`}
+                  >
+                    {c.isActive ? "Disable" : "Enable"}
+                  </button>
+
+                  <button
+                    onClick={() => deleteCoupon(c._id)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  )}
+</div>
+
+
 
       {/* ================= MODAL ================= */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Create Coupon</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl p-6">
+            <h2 className="text-xl font-bold mb-1">Create New Coupon</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              Configure discount rules for checkout
+            </p>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <input
                 name="code"
-                placeholder="Coupon Code"
-                className="border p-2 rounded w-full uppercase"
+                placeholder="Coupon Code (e.g. SAVE10)"
+                className="border rounded-lg px-3 py-2 w-full uppercase"
                 value={form.code}
                 onChange={handleChange}
               />
 
               <select
                 name="type"
-                className="border p-2 rounded w-full"
+                className="border rounded-lg px-3 py-2 w-full"
                 value={form.type}
                 onChange={handleChange}
               >
-                <option value="PERCENT">Percentage</option>
-                <option value="FLAT">Flat</option>
+                <option value="PERCENT">Percentage Discount</option>
+                <option value="FLAT">Flat Discount</option>
               </select>
 
               <input
                 name="value"
                 type="number"
-                placeholder={form.type === "PERCENT" ? "Discount %" : "Flat Amount"}
-                className="border p-2 rounded w-full"
+                placeholder={
+                  form.type === "PERCENT" ? "Discount %" : "Flat Amount (₹)"
+                }
+                className="border rounded-lg px-3 py-2 w-full"
                 value={form.value}
                 onChange={handleChange}
               />
@@ -224,8 +301,8 @@ const AdminCoupons = () => {
               <input
                 name="minCartValue"
                 type="number"
-                placeholder="Minimum Cart Value"
-                className="border p-2 rounded w-full"
+                placeholder="Minimum Cart Value (₹)"
+                className="border rounded-lg px-3 py-2 w-full"
                 value={form.minCartValue}
                 onChange={handleChange}
               />
@@ -234,8 +311,8 @@ const AdminCoupons = () => {
                 <input
                   name="maxDiscount"
                   type="number"
-                  placeholder="Max Discount"
-                  className="border p-2 rounded w-full"
+                  placeholder="Max Discount (₹)"
+                  className="border rounded-lg px-3 py-2 w-full"
                   value={form.maxDiscount}
                   onChange={handleChange}
                 />
@@ -244,21 +321,28 @@ const AdminCoupons = () => {
               <input
                 name="expiry"
                 type="date"
-                className="border p-2 rounded w-full"
+                className="border rounded-lg px-3 py-2 w-full"
                 value={form.expiry}
                 onChange={handleChange}
               />
 
               <button
-                onClick={createCoupon}
-                className="w-full bg-orange-600 text-white py-2 rounded"
+                onClick={async () => {
+                  setCreating(true);
+                  await createCoupon();
+                  setCreating(false);
+                }}
+                disabled={creating}
+                className={`w-full py-2.5 rounded-xl font-semibold text-white ${
+                  creating ? "bg-gray-400" : "bg-orange-600 hover:bg-orange-700"
+                }`}
               >
-                Create Coupon
+                {creating ? "Creating..." : "Create Coupon"}
               </button>
 
               <button
                 onClick={() => setShowModal(false)}
-                className="w-full bg-gray-200 py-2 rounded"
+                className="w-full py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200"
               >
                 Cancel
               </button>

@@ -175,6 +175,7 @@ export const getActiveAnnouncement = asyncHandler(async (req, res) => {
       minCartValue: coupon.minCartValue,
       discount: discountValue,
       couponCode: coupon.code,
+      couponType:coupon.type,
     },
   });
 });

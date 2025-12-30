@@ -93,6 +93,7 @@ const loadAnnouncement = async () => {
   try {
     const res = await api.get("/coupons/active-announcement");
     setAnnouncement(res.data.data);
+    console.log(res.data.data)
   } catch (err) {
     console.log("Announcement load failed", err);
     setAnnouncement(null);
@@ -377,6 +378,8 @@ useEffect(() => {
               cartTotal={subtotal}
               minCartValue={announcement.minCartValue}
               discount={announcement.discount}
+              couponCode={announcement.couponCode}
+              couponType={announcement.couponType}
             />
           </div>
         )}
@@ -417,6 +420,15 @@ useEffect(() => {
               Coupon applied · You saved ₹{couponDiscount}
             </p>
           )}
+          <button
+  onClick={() => {
+    setCouponCode("");
+    setCouponDiscount(0);
+  }}
+  className="text-xs text-red-500 underline mt-1"
+>
+  Remove
+</button>
         </div>
 
         {/* 💰 PRICE DETAILS */}

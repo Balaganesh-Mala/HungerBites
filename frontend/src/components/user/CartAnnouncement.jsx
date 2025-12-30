@@ -5,14 +5,13 @@ const CartAnnouncement = ({
   cartTotal,
   minCartValue,
   discount,
+  couponCode,
+  couponType,
 }) => {
   if (discount <= 0) return null;
 
   const remaining = Math.max(minCartValue - cartTotal, 0);
-  const progress = Math.min(
-    Math.round((cartTotal / minCartValue) * 100),
-    100
-  );
+  const progress = Math.min(Math.round((cartTotal / minCartValue) * 100), 100);
 
   return (
     <motion.div
@@ -22,7 +21,6 @@ const CartAnnouncement = ({
       className="mb-5"
     >
       <div className="relative rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-
         {/* ICON */}
         <div className="absolute -top-4 left-4 bg-orange-100 p-2 rounded-full">
           {remaining > 0 ? (
@@ -51,16 +49,26 @@ const CartAnnouncement = ({
             </p>
           </div>
         ) : (
-          <div className="pt-3">
-            <p className="text-sm font-semibold text-green-700">
-              Coupon unlocked 🎉
+          <div className="pt-3 space-y-1">
+            <p className="text-sm font-semibold text-green-700 flex items-center gap-1">
+              🎉 Coupon unlocked
             </p>
-            <p className="text-sm text-gray-600 mt-1">
-              You’ll save{" "}
-              <span className="font-semibold text-green-600">
-                {discount}%
+
+            <p className="text-sm text-gray-600">
+              Use code{" "}
+              <span className="font-semibold text-gray-900 bg-green-50 px-2 py-0.5 rounded">
+                {couponCode}
               </span>{" "}
-              on this order
+              to get{" "}
+              <span className="font-semibold text-green-600">
+                {couponType === "PERCENT"
+                  ? `${discount}% OFF`
+                  : `₹${discount} OFF`}
+              </span>
+            </p>
+
+            <p className="text-xs text-gray-500">
+              Applied automatically at checkout
             </p>
           </div>
         )}
@@ -73,9 +81,7 @@ const CartAnnouncement = ({
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.6 }}
               className={`h-full rounded-full ${
-                remaining > 0
-                  ? "bg-orange-500"
-                  : "bg-green-600"
+                remaining > 0 ? "bg-orange-500" : "bg-green-600"
               }`}
             />
           </div>
