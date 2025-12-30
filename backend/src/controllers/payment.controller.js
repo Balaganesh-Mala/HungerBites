@@ -6,6 +6,10 @@ import Payment from "../models/payment.model.js";
 import Order from "../models/order.model.js";
 import dotenv from "dotenv";
 import Cart from "../models/cart.model.js";
+import Coupon from "../models/Coupon.model.js";
+import { ShiprocketService } from "../services/shiprocket.service.js";
+import { buildShiprocketOrderPayload } from "../utils/shiprocketOrderBuilder.js";
+
 import { buildFinalOrderItems } from "../utils/order.utils.js";
 
 
@@ -38,6 +42,25 @@ export const createPaymentOrder = asyncHandler(async (req, res) => {
 
   const order = await razorpay.orders.create(options);
 
+  try {
+  const payload = buildShiprocketOrderPayload(order);
+
+  const shiprocketRes = await ShiprocketService.request(
+    "post",
+    "/orders/create",
+    payload
+  );
+
+  order.shipmentId = shiprocketRes.shipment_id;
+  order.trackingId = shiprocketRes.awb_code;
+  order.courierName = shiprocketRes.courier_name;
+  order.shipmentStatus = "Booked";
+
+  await order.save();
+} catch (err) {
+  console.error("Shiprocket booking failed:", err.response?.data || err.message);
+}
+
   res.status(200).json({
     success: true,
     orderId: order.id,
@@ -57,28 +80,75 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     orderData,
   } = req.body;
 
+  // 1️⃣ Verify Razorpay signature
   const expected = crypto
     .createHmac("sha256", process.env.RAZORPAY_SECRET)
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest("hex");
 
   if (expected !== razorpay_signature) {
+    res.status(400);
     throw new Error("Invalid payment signature");
   }
 
-  // ✅ NOW payment is confirmed
+  // 2️⃣ Lock product prices & validate stock
   const { finalOrderItems, itemsPrice } =
     await buildFinalOrderItems(orderData.orderItems);
 
+  // 3️⃣ Re-apply coupon on backend (CRITICAL)
+  let discount = 0;
+  let appliedCoupon = null;
+
+  if (orderData?.couponCode) {
+    const coupon = await Coupon.findOne({
+      code: orderData.couponCode.toUpperCase(),
+      isActive: true,
+    });
+
+    if (!coupon) throw new Error("Invalid coupon");
+
+    if (new Date(coupon.expiry) < new Date())
+      throw new Error("Coupon expired");
+
+    if (itemsPrice < coupon.minCartValue)
+      throw new Error(
+        `Minimum cart value ₹${coupon.minCartValue} required`
+      );
+
+    if (coupon.type === "PERCENT") {
+      discount = (itemsPrice * coupon.value) / 100;
+      if (coupon.maxDiscount) {
+        discount = Math.min(discount, coupon.maxDiscount);
+      }
+    }
+
+    if (coupon.type === "FLAT") {
+      discount = coupon.value;
+    }
+
+    discount = Math.min(discount, itemsPrice);
+    appliedCoupon = coupon.code;
+  }
+
+  const finalTotal = Math.max(itemsPrice - discount, 0);
+
+  // 4️⃣ Create Order (ONLINE PAYMENT)
   const order = await Order.create({
     user: req.user._id,
     orderItems: finalOrderItems,
-    itemsPrice,
-    totalPrice: orderData.totalPrice,
     shippingAddress: orderData.shippingAddress,
+
+    itemsPrice,
+    totalPrice: finalTotal,
+
+    coupon: appliedCoupon
+      ? { code: appliedCoupon, discount }
+      : null,
+
     paymentMethod: "online",
     paymentStatus: "Paid",
     orderStatus: "Processing",
+
     paymentInfo: {
       id: razorpay_payment_id,
       status: "Paid",
@@ -86,7 +156,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     },
   });
 
-  // Reduce stock
+  // 5️⃣ Reduce stock
   const bulkOps = finalOrderItems.map((item) => ({
     updateOne: {
       filter: { _id: item.productId },
@@ -96,7 +166,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
 
   await Product.bulkWrite(bulkOps);
 
-  // Clear cart
+  // 6️⃣ Clear cart
   await Cart.deleteOne({ user: req.user._id });
 
   res.status(201).json({
@@ -149,13 +219,47 @@ export const getAllPayments = asyncHandler(async (req, res) => {
 });
 
 export const initiateOnlinePayment = asyncHandler(async (req, res) => {
-  const { orderItems, totalPrice, shippingAddress } = req.body;
+  const { orderItems, couponCode, shippingAddress } = req.body;
 
-  // Validate items but DO NOT create order
-  await buildFinalOrderItems(orderItems);
+  // 1️⃣ Validate & lock product prices
+  const { finalOrderItems, itemsPrice } =
+    await buildFinalOrderItems(orderItems);
 
+  // 2️⃣ Apply coupon (same logic as COD)
+  let discount = 0;
+
+  if (couponCode) {
+    const coupon = await Coupon.findOne({
+      code: couponCode.toUpperCase(),
+      isActive: true,
+    });
+
+    if (!coupon) throw new Error("Invalid coupon");
+    if (new Date(coupon.expiry) < new Date())
+      throw new Error("Coupon expired");
+
+    if (itemsPrice < coupon.minCartValue)
+      throw new Error(`Minimum cart value ₹${coupon.minCartValue} required`);
+
+    if (coupon.type === "PERCENT") {
+      discount = (itemsPrice * coupon.value) / 100;
+      if (coupon.maxDiscount) {
+        discount = Math.min(discount, coupon.maxDiscount);
+      }
+    }
+
+    if (coupon.type === "FLAT") {
+      discount = coupon.value;
+    }
+
+    discount = Math.min(discount, itemsPrice);
+  }
+
+  const finalAmount = Math.max(itemsPrice - discount, 0);
+
+  // 3️⃣ Create Razorpay order (PAISE)
   const razorpayOrder = await razorpay.orders.create({
-    amount: totalPrice * 100,
+    amount: finalAmount * 100,
     currency: "INR",
     receipt: `rcpt_${Date.now()}`,
   });
@@ -165,13 +269,19 @@ export const initiateOnlinePayment = asyncHandler(async (req, res) => {
     razorpayOrderId: razorpayOrder.id,
     amount: razorpayOrder.amount,
 
-    // Send order data back (frontend will resend on verify)
+    // frontend will resend this in verify
     orderData: {
-      orderItems,
-      totalPrice,
+      orderItems: finalOrderItems,
       shippingAddress,
+      coupon: couponCode
+        ? { code: couponCode, discount }
+        : null,
+      itemsPrice,
+      discount,
+      totalPrice: finalAmount,
     },
   });
 });
+
 
 

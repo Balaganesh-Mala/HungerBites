@@ -14,8 +14,10 @@ import settingsRoutes from "./routes/settings.routes.js";
 import blogRoutes from "./routes/blog.routes.js";
 import contactRoutes from "./routes/contact.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
-import orderRoutes from "./routes/order.routes.js"; // 🆕 Add order routes
-// import categoryRoutes from "./routes/category.routes.js"; // (optional future addition)
+import orderRoutes from "./routes/order.routes.js";
+import heroRoutes from "./routes/hero.routes.js";
+import couponRoutes from "./routes/coupon.routes.js";
+import shiprocketRoutes from "./routes/shiprocket.routes.js"
 
 dotenv.config();
 
@@ -38,6 +40,10 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/hero", heroRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/shiprocket", shiprocketRoutes);
+
 
 // ✅ Health check route (optional but useful)
 app.get("/", (req, res) => {

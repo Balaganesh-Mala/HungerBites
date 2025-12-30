@@ -9,10 +9,6 @@ const FeaturedProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const handleAddToCart = (product) => {
-    alert(`Added to cart: ${product.name}`);
-  };
-
   const loadFeatured = async () => {
     try {
       const res = await api.get("/products?featured=true&limit=8");
@@ -28,67 +24,78 @@ const FeaturedProducts = () => {
     loadFeatured();
   }, []);
 
+  /* 🔄 SKELETON LOADER */
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-10">
-        <motion.p
-          animate={{ opacity: [0.3, 1, 0.3] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className="text-gray-400 text-lg font-medium"
-        >
-          Loading Featured Products…
-        </motion.p>
-      </div>
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-64 rounded-2xl bg-gray-100 animate-pulse"
+            />
+          ))}
+        </div>
+      </section>
     );
   }
 
   if (!products.length) return null;
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      viewport={{ once: true }}
-      className="max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-5"
-    >
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end mb-10 gap-4">
-        <div className="text-center sm:text-left">
-          <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 tracking-tight">
-            Featured Products <span className="text-orange-600">✨</span>
+    <section className="max-w-6xl mx-auto px-6 pt-24 pb-12">
+      {/* 🏷️ SECTION HEADER */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 mb-12">
+        <div>
+          <span className="inline-block mb-3 text-xs font-semibold tracking-wide text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
+            Curated for You
+          </span>
+
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
+            Featured Products
           </h2>
-          <p className="text-gray-500 text-sm mt-3 max-w-md">
-            Specially curated snacks you must try – healthy, tasty & trending!
+
+          <p className="mt-3 text-sm text-gray-500 max-w-md">
+            Handpicked best-sellers made with quality ingredients you’ll love.
           </p>
         </div>
 
         <Link
           to="/products"
-          className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-2.5 rounded-full
-                     hover:bg-black transition shadow-sm hover:-translate-y-1 text-sm font-medium"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-900
+                     hover:text-orange-600 transition group"
         >
-          View All <FiArrowRight size={14} />
+          View all products
+          <FiArrowRight className="group-hover:translate-x-1 transition" />
         </Link>
       </div>
 
-      {/* ✅ PRODUCT GRID */}
-      <div
-        className={`grid gap-6 ${
-          products.length < 4
-            ? "grid-cols-2 sm:grid-cols-3 justify-center"
-            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
-        }`}
+      {/* 🛍️ PRODUCT GRID */}
+      <motion.div
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true }}
+        variants={{
+          hidden: {},
+          show: {
+            transition: { staggerChildren: 0.08 },
+          },
+        }}
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6"
       >
         {products.slice(0, 8).map((product) => (
-          <ProductCard
+          <motion.div
             key={product._id}
-            product={product}
-            onAddToCart={handleAddToCart}
-          />
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 },
+            }}
+          >
+            <ProductCard product={product} />
+          </motion.div>
         ))}
-      </div>
-    </motion.section>
+      </motion.div>
+    </section>
   );
 };
 

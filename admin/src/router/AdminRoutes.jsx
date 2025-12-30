@@ -16,6 +16,8 @@ import Settings from "../pages/admin/Settings.jsx";
 import Categories from "../pages/admin/Categories.jsx";
 import BlogManager from "../pages/admin/BlogManager.jsx";
 import ContactMessages from "../pages/admin/ContactMessages.jsx";
+import AdminHero from "../pages/admin/AdminHero.jsx";
+import AdminCoupons from "../pages/admin/AdminCoupons.jsx";
 
 
 import AdminProtectedRoute from "../components/common/ProtectedRoute.jsx";
@@ -46,6 +48,8 @@ const AdminRoutes = () => {
           <Route path="blogs" element={<BlogManager/>}/>
           <Route path="settings" element={<Settings />} />
           <Route path="categories" element={<Categories />} />
+          <Route path="hero" element={<AdminHero/>}/>
+          <Route path="coupons" element={<AdminCoupons />} />
           <Route path="messages" element={<ContactMessages />} />
         </Route>
 

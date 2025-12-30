@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Autoplay } from "swiper/modules";
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
+
+import "swiper/css";
+import "swiper/css/navigation";
 
 const RecentlyViewed = () => {
   const [items, setItems] = useState([]);
@@ -9,45 +15,76 @@ const RecentlyViewed = () => {
     setItems(data);
   }, []);
 
-  if (items.length === 0) return null;
+  if (!items.length) return null;
+
+  // 🔁 Duplicate aggressively for seamless loop
+  const loopItems =
+    items.length < 8
+      ? [...items, ...items, ...items]
+      : items;
 
   return (
-    <section className="max-w-6xl mx-auto px-5 sm:px-6 pt-0 pb-0">
+    <section className="max-w-6xl mx-auto px-6 pt-0 pb-5 relative">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-          Recently Viewed
-        </h2>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">
+            Recently Viewed
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">
+            Continue browsing where you left off
+          </p>
+        </div>
 
         <button
           onClick={() => {
             localStorage.removeItem("recent_viewed");
             setItems([]);
           }}
-          className="text-xs sm:text-sm text-red-500 hover:text-red-600 transition underline"
+          className="text-xs text-gray-400 hover:text-red-500 transition"
         >
-          Clear All
+          Clear
         </button>
       </div>
 
-      {/* HORIZONTAL SCROLL */}
-      <div className="relative">
-        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide scroll-smooth">
-          {items.slice(0, 8).map((p) => (
+      {/* 🔁 INFINITE LOOP CAROUSEL */}
+      <Swiper
+        modules={[Navigation, Autoplay]}
+        loop
+        slidesPerView="auto"
+        spaceBetween={16}
+        speed={12000}                 // ⏩ smooth speed
+        autoplay={{
+          delay: 0,
+          disableOnInteraction: false,
+          pauseOnMouseEnter: true,   // 🛑 pause on hover
+        }}
+        allowTouchMove={true}        // keep swipe on mobile
+        loopAdditionalSlides={10}
+        navigation={{
+          nextEl: ".recent-next",
+          prevEl: ".recent-prev",
+        }}
+        className="pb-4"
+      >
+        {loopItems.map((p, i) => (
+          <SwiperSlide
+            key={`${p._id}-${i}`}
+            className="!w-[160px] sm:!w-[190px]"
+          >
             <Link
-              key={p._id}
               to={`/product/${p._id}`}
-              className="group min-w-[170px] sm:min-w-[190px]
-                         bg-white rounded-2xl border border-gray-100
-                         shadow-sm hover:shadow-md transition-all"
+              className="group block bg-white rounded-2xl 
+              border border-gray-100 shadow-sm 
+              hover:shadow-md transition overflow-hidden"
             >
               {/* IMAGE */}
-              <div className="overflow-hidden rounded-t-2xl">
+              <div className="h-32 overflow-hidden">
                 <img
                   src={p.image}
                   alt={p.title}
-                  className="w-full h-32 object-cover
-                             group-hover:scale-105 transition duration-500"
+                  className="w-full h-full object-cover 
+                  group-hover:scale-105 transition duration-500"
                 />
               </div>
 
@@ -62,12 +99,32 @@ const RecentlyViewed = () => {
                 </p>
               </div>
             </Link>
-          ))}
-        </div>
+          </SwiperSlide>
+        ))}
+      </Swiper>
 
-        {/* FADE EDGE (UX hint for scroll) */}
-        <div className="pointer-events-none absolute top-0 right-0 h-full w-12 bg-gradient-to-l from-white"></div>
-      </div>
+      {/* FADE EDGES (UX POLISH) */}
+      <div className="pointer-events-none absolute top-0 right-0 h-full w-16 bg-gradient-to-l from-white" />
+      <div className="pointer-events-none absolute top-0 left-0 h-full w-16 bg-gradient-to-r from-white" />
+
+      {/* NAVIGATION (DESKTOP) */}
+      <button
+        className="recent-prev hidden md:flex absolute left-2 top-1/2 
+        -translate-y-1/2 w-9 h-9 rounded-full bg-white 
+        shadow-md items-center justify-center text-gray-600 
+        hover:bg-gray-100 z-10"
+      >
+        <FaArrowLeft size={14} />
+      </button>
+
+      <button
+        className="recent-next hidden md:flex absolute right-2 top-1/2 
+        -translate-y-1/2 w-9 h-9 rounded-full bg-white 
+        shadow-md items-center justify-center text-gray-600 
+        hover:bg-gray-100 z-10"
+      >
+        <FaArrowRight size={14} />
+      </button>
     </section>
   );
 };

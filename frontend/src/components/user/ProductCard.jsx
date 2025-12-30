@@ -13,9 +13,13 @@ const ProductCard = ({ product }) => {
       ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
       : 0;
 
+  const handleCardClick = () => {
+    navigate(`/product/${product._id}`);
+  };
+
   const handleAddToCart = async (e) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.stopPropagation(); // 🚨 VERY IMPORTANT
 
     if (!product._id) return;
 
@@ -55,28 +59,27 @@ const ProductCard = ({ product }) => {
 
   return (
     <motion.div
+      onClick={handleCardClick} // ✅ whole card clickable
       whileHover={{ y: -6, scale: 1.02 }}
       transition={{ type: "spring", stiffness: 120 }}
       className="group bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 cursor-pointer"
     >
       {/* PRODUCT IMAGE */}
-      <Link to={`/product/${product._id}`}>
-        <div className="relative h-[200px] overflow-hidden bg-gray-50">
-          {discount > 0 && (
-            <span className="absolute top-3 left-3 bg-gray-900 text-white text-[11px] px-2.5 py-1 rounded-md z-10">
-              -{discount}%
-            </span>
-          )}
+      <div className="relative h-[200px] overflow-hidden bg-gray-50">
+        {discount > 0 && (
+          <span className="absolute top-3 left-3 bg-gray-900 text-white text-[11px] px-2.5 py-1 rounded-md z-10">
+            -{discount}%
+          </span>
+        )}
 
-          <motion.img
-            whileHover={{ scale: 1.15 }}
-            transition={{ duration: 0.5 }}
-            src={product.images?.[0]?.url}
-            alt={product.name}
-            className="w-full h-full object-cover transform-gpu"
-          />
-        </div>
-      </Link>
+        <motion.img
+          whileHover={{ scale: 1.15 }}
+          transition={{ duration: 0.5 }}
+          src={product.images?.[0]?.url}
+          alt={product.name}
+          className="w-full h-full object-cover"
+        />
+      </div>
 
       {/* PRODUCT DETAILS */}
       <div className="p-4">
@@ -91,26 +94,26 @@ const ProductCard = ({ product }) => {
           <span className="text-gray-900 font-bold">₹{product.price}</span>
         </div>
 
-        {/* ADD TO CART + VIEW */}
+        {/* ACTIONS */}
         <div className="flex items-center justify-between mt-4">
           <motion.button
             whileTap={{ scale: 0.85 }}
             onClick={handleAddToCart}
             disabled={product.stock === 0}
             className={`w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-700 
-                ${
-                  product.stock === 0
-                    ? "opacity-40 cursor-not-allowed"
-                    : "hover:bg-orange-600 hover:border-orange-600 hover:text-white"
-                } transition-all`}
+              ${
+                product.stock === 0
+                  ? "opacity-40 cursor-not-allowed"
+                  : "hover:bg-orange-600 hover:border-orange-600 hover:text-white"
+              } transition-all`}
           >
             <FiShoppingCart size={14} />
           </motion.button>
-          <Link to={`/product/${product._id}`}>
-            <span className="text-xs text-orange-600 font-medium hover:text-orange-700 transition flex items-center">
-              View <FiArrowRight className="ml-1" />
-            </span>
-          </Link>
+
+          {/* Optional: Keep View text (works fine) */}
+          <span className="text-xs text-orange-600 font-medium flex items-center">
+            View <FiArrowRight className="ml-1" />
+          </span>
         </div>
       </div>
     </motion.div>

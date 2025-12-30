@@ -24,63 +24,80 @@ const BestSellers = () => {
     loadBestSellers();
   }, []);
 
-  if (loading)
+  /* 🔄 SKELETON LOADER */
+  if (loading) {
     return (
-      <div className="flex justify-center items-center py-10">
-        <motion.p
-          animate={{ opacity: [0.3, 1, 0.3] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className="text-gray-400 text-lg font-medium"
-        >
-          Loading Best Sellers…
-        </motion.p>
-      </div>
+      <section className="max-w-6xl mx-auto px-6 py-20">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-64 rounded-2xl bg-gray-100 animate-pulse"
+            />
+          ))}
+        </div>
+      </section>
     );
+  }
 
   if (!products.length) return null;
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      viewport={{ once: true }}
-      className="max-w-6xl mx-auto px-5 sm:px-6 pt-0 pb-0"
-    >
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row justify-between items-center sm:items-end mb-10 gap-4">
-        <div className="text-center sm:text-left">
-          <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-            Best Sellers <span className="text-orange-600">🔥</span>
+    <section className="max-w-6xl mx-auto px-6 pt-0 pb-14">
+      {/* 🔥 HEADER */}
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 mb-12">
+        <div>
+          <span className="inline-flex items-center gap-1 text-xs font-semibold tracking-wide 
+                           text-red-600 bg-red-50 px-3 py-1 rounded-full mb-3">
+            🔥 Customer Favorites
+          </span>
+
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+            Best Sellers
           </h2>
-          <p className="text-gray-500 text-sm mt-3 max-w-md">
-            Most loved, top rated, and trending snacks our customers can’t stop
-            buying!
+
+          <p className="mt-3 text-sm text-gray-500 max-w-md">
+            Products our customers keep coming back for — trusted, loved, and
+            trending.
           </p>
         </div>
 
         <Link
           to="/products"
-          className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-2.5 rounded-full 
-                     hover:bg-black transition shadow-sm hover:-translate-y-1 text-sm font-medium"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-900
+                     hover:text-red-600 transition group"
         >
-          View All <FiArrowRight size={14} />
+          Explore all best sellers
+          <FiArrowRight className="group-hover:translate-x-1 transition" />
         </Link>
       </div>
 
-      {/* PRODUCT GRID */}
-      <div
-        className={`grid gap-6 ${
-          products.length < 4
-            ? "grid-cols-2 sm:grid-cols-3 justify-center"
-            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4"
-        }`}
+      {/* 🛍️ PRODUCTS */}
+      <motion.div
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true }}
+        variants={{
+          hidden: {},
+          show: {
+            transition: { staggerChildren: 0.08 },
+          },
+        }}
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6"
       >
         {products.slice(0, 8).map((product) => (
-          <ProductCard key={product._id} product={product} />
+          <motion.div
+            key={product._id}
+            variants={{
+              hidden: { opacity: 0, y: 25 },
+              show: { opacity: 1, y: 0 },
+            }}
+          >
+            <ProductCard product={product} />
+          </motion.div>
         ))}
-      </div>
-    </motion.section>
+      </motion.div>
+    </section>
   );
 };
 
