@@ -1,61 +1,60 @@
 import asyncHandler from "express-async-handler";
 import Order from "../models/order.model.js";
 
+const SHIPROCKET_STATUS_MAP = {
+  NEW: "Booked",
+  AWB_ASSIGNED: "Booked",
+
+  PICKUP_SCHEDULED: "Booked",
+  PICKED_UP: "Shipped",
+
+  IN_TRANSIT: "In Transit",
+  "In Transit": "In Transit",
+
+  OUT_FOR_DELIVERY: "Out for Delivery",
+  "Out for Delivery": "Out for Delivery",
+
+  DELIVERED: "Delivered",
+
+  CANCELLED: "Cancelled",
+
+  RTO_INITIATED: "In Transit",
+  RTO_DELIVERED: "Delivered"
+};
+
 export const shiprocketWebhook = asyncHandler(async (req, res) => {
-console.log("🔥 WEBHOOK HIT 🔥");
-  console.log("📦 Shiprocket Webhook Headers:", req.headers);
-console.log("📦 Shiprocket Webhook Body:", req.body);
+  console.log("🔥 WEBHOOK HIT 🔥");
+  console.log("📦 Shiprocket Webhook HIT");
+  console.log("Body:", req.body);
 
-  /* 🔐 VERIFY WEBHOOK TOKEN */
-  const receivedToken = req.headers["x-api-key"];
-  if (receivedToken !== process.env.SHIPROCKET_WEBHOOK_TOKEN) {
-    return res.status(401).json({ success: false });
+  const { awb, current_status, scan } = req.body;
+
+  if (!awb || !current_status) {
+    return res.status(200).json({ success: true });
   }
 
-  const payload = req.body;
-  let order = null;
-
-  // 1️⃣ Try by AWB
-  if (payload.awb) {
-    order = await Order.findOne({ trackingId: payload.awb });
-  }
-
-  // 2️⃣ Fallback by shipment_id (FIRST WEBHOOK)
-  if (!order && payload.shipment_id) {
-    order = await Order.findOne({
-      shipmentId: payload.shipment_id.toString(),
-    });
-  }
-
+  const order = await Order.findOne({ trackingId: awb });
   if (!order) {
     return res.status(200).json({ success: true });
   }
 
-  // 3️⃣ Save AWB & courier (first time)
-  if (!order.trackingId && payload.awb) {
-    order.trackingId = payload.awb;
-  }
+  // 🔹 Map status safely
+  const mappedStatus =
+    SHIPROCKET_STATUS_MAP[current_status] || order.shipmentStatus;
 
-  if (!order.courierName && payload.courier_name) {
-    order.courierName = payload.courier_name;
-  }
+  order.shipmentStatus = mappedStatus;
 
-  // 4️⃣ Update shipment status
-  if (payload.current_status) {
-    order.shipmentStatus = payload.current_status;
-  }
-
-  // 5️⃣ Tracking history
-  if (payload.scan) {
+  // 🔹 Save tracking history
+  if (scan) {
     order.trackingHistory.push({
-      status: payload.current_status,
-      location: payload.scan.location,
-      time: payload.scan.time,
+      status: mappedStatus,
+      location: scan.location || "",
+      time: scan.time || new Date()
     });
   }
 
-  // 6️⃣ Delivered logic
-  if (payload.current_status === "Delivered") {
+  // 🔹 Auto-complete order
+  if (mappedStatus === "Delivered") {
     order.orderStatus = "Delivered";
     order.paymentStatus = "Paid";
     order.deliveredAt = new Date();
@@ -63,5 +62,5 @@ console.log("📦 Shiprocket Webhook Body:", req.body);
 
   await order.save();
 
-  return res.status(200).json({ success: true });
+  res.status(200).json({ success: true });
 });
