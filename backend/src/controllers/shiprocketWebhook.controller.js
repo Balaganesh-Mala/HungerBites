@@ -2,7 +2,7 @@ import asyncHandler from "express-async-handler";
 import Order from "../models/order.model.js";
 
 export const shiprocketWebhook = asyncHandler(async (req, res) => {
-
+console.log("🔥 WEBHOOK HIT 🔥");
   console.log("📦 Shiprocket Webhook Headers:", req.headers);
 console.log("📦 Shiprocket Webhook Body:", req.body);
 

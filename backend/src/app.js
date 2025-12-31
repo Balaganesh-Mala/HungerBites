@@ -18,6 +18,7 @@ import orderRoutes from "./routes/order.routes.js";
 import heroRoutes from "./routes/hero.routes.js";
 import couponRoutes from "./routes/coupon.routes.js";
 import shiprocketRoutes from "./routes/shiprocket.routes.js"
+import webhookRoutes from "./routes/shiprocket.routes.js";
 
 dotenv.config();
 
@@ -43,6 +44,12 @@ app.use("/api/contact", contactRoutes);
 app.use("/api/hero", heroRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/shiprocket", shiprocketRoutes);
+app.post("/api/webhooks/shipment", (req, res) => {
+  console.log("🔥 DIRECT WEBHOOK TEST HIT 🔥");
+  res.json({ ok: true });
+});
+
+
 
 
 
