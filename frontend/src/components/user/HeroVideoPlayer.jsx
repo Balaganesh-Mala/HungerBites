@@ -67,24 +67,27 @@ export default function Hero() {
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
 
         <motion.h1
-          key={activeSlide.title}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl md:text-6xl font-extrabold text-white drop-shadow-xl"
-        >
-          {activeSlide.title}
-        </motion.h1>
+  key={`title-${currentSlide}`}
+  initial={{ opacity: 0, y: 30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6 }}
+  className="text-3xl md:text-6xl font-extrabold text-white"
+>
+  {activeSlide.title}
+</motion.h1>
 
-        <motion.p
-          key={activeSlide.subtitle}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="mt-4 max-w-2xl text-base md:text-xl text-gray-200"
-        >
-          {activeSlide.subtitle}
-        </motion.p>
+        {activeSlide.subtitle && (
+  <motion.p
+    key={`subtitle-${currentSlide}`}
+    initial={{ opacity: 0, y: 15 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.2, duration: 0.5 }}
+    className="mt-4 text-gray-200"
+  >
+    {activeSlide.subtitle}
+  </motion.p>
+)}
+
 
         {activeSlide.buttonText && (
           <motion.button

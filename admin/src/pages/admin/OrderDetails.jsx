@@ -5,87 +5,111 @@ import Swal from "sweetalert2";
 
 const OrderDetails = () => {
   const { id } = useParams();
+
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [shipLoading, setShipLoading] = useState(false);
-  const [trackLoading, setTrackLoading] = useState(false);
+  const [pickupLoading, setPickupLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
 
-  const statusOptions = ["Processing", "Shipped", "Delivered", "Cancelled"];
+  // ✅ BUSINESS status only
+  const statusOptions = ["Processing", "Delivered", "Cancelled"];
 
   const colors = {
     Processing: "bg-orange-100 text-orange-600",
-    Shipped: "bg-blue-100 text-blue-600",
     Delivered: "bg-green-100 text-green-600",
     Cancelled: "bg-red-100 text-red-600",
+
+    // shipment
+    Booked: "bg-purple-100 text-purple-600",
+    Shipped: "bg-blue-100 text-blue-600",
+    "In Transit": "bg-indigo-100 text-indigo-600",
+    "Out for Delivery": "bg-yellow-100 text-yellow-700",
   };
 
+  /* ================= LOAD ORDER ================= */
   const loadOrder = async () => {
     try {
       setLoading(true);
-      const res = await adminApi.get(`/orders`);
+      const res = await adminApi.get("/orders");
       const found = res.data.orders.find((o) => o._id === id);
       setOrder(found || null);
     } catch {
       Swal.fire("Error", "Failed to load order", "error");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     loadOrder();
   }, []);
 
+  /* ================= UPDATE ORDER STATUS ================= */
   const updateStatus = async (status) => {
     setStatusLoading(true);
     try {
       await adminApi.put(`/orders/${id}/status`, { status });
-      Swal.fire("Updated", "Order status changed!", "success");
+      Swal.fire("Updated", "Order status updated", "success");
       loadOrder();
     } catch {
       Swal.fire("Error", "Status update failed", "error");
+    } finally {
+      setStatusLoading(false);
     }
-    setStatusLoading(false);
   };
 
+  /* ================= GENERATE AWB ================= */
   const shipOrder = async () => {
     setShipLoading(true);
     try {
-      const res = await adminApi.post(`/orders/ship/${order._id}`);
-      Swal.fire("Shipment Created", `Tracking ID: ${res.data.trackingId}`, "success");
+      const res = await adminApi.post(`/orders/${order._id}/generate-awb`);
+
+      Swal.fire(
+        "Shipment Created",
+        `Tracking ID: ${res.data.awb}`,
+        "success"
+      );
+
       loadOrder();
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.message || "Shipping failed", "error");
+      Swal.fire(
+        "Error",
+        err.response?.data?.message || "Failed to generate AWB",
+        "error"
+      );
+    } finally {
+      setShipLoading(false);
     }
-    setShipLoading(false);
   };
 
-  const refreshTracking = async () => {
-    setTrackLoading(true);
+  /* ================= REQUEST PICKUP ================= */
+  const requestPickup = async () => {
+    setPickupLoading(true);
     try {
-      const res = await adminApi.get(`/orders/track/${order.trackingId}`);
-      Swal.fire("Tracking Updated", `Status: ${res.data.status}`, "success");
+      await adminApi.post(`/orders/${order._id}/request-pickup`);
+      Swal.fire("Pickup Requested", "Courier pickup scheduled", "success");
       loadOrder();
     } catch {
-      Swal.fire("Error", "Tracking failed", "error");
+      Swal.fire("Error", "Pickup request failed", "error");
+    } finally {
+      setPickupLoading(false);
     }
-    setTrackLoading(false);
   };
 
+  /* ================= UI STATES ================= */
   if (loading) return <p className="p-6">Loading...</p>;
   if (!order) return <p className="p-6 text-red-500">Order Not Found</p>;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-
       <h2 className="text-2xl font-bold mb-6">Order Details</h2>
 
-      {/* INFO CARD */}
+      {/* ================= ORDER INFO ================= */}
       <div className="bg-white shadow rounded-xl p-6 mb-6">
         <p className="font-semibold text-lg">Order #{order._id}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-3 text-sm">
-
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-4 text-sm">
           <div>
             <p className="text-gray-500">Customer</p>
             <p>{order.user?.name}</p>
@@ -106,40 +130,49 @@ const OrderDetails = () => {
               {order.orderStatus}
             </span>
           </div>
+
+          <div>
+            <p className="text-gray-500">Shipment Status</p>
+            <span className={`px-3 py-1 rounded-full text-xs ${colors[order.shipmentStatus]}`}>
+              {order.shipmentStatus}
+            </span>
+          </div>
         </div>
 
-        {/* SHIP BUTTON */}
-        {!order.trackingId && order.orderStatus === "Processing" && (
-          <button
-            onClick={shipOrder}
-            disabled={shipLoading}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg mt-4"
-          >
-            {shipLoading ? "Shipping..." : "Ship Order"}
-          </button>
-        )}
-
-        {/* Tracking Buttons */}
-        {order.trackingId && (
-          <div className="mt-4 flex gap-3">
-            <div className="bg-gray-100 px-4 py-2 rounded text-sm">
-              Tracking: <b>{order.trackingId}</b>
-            </div>
-
+        {/* ================= SHIPPING ACTIONS ================= */}
+        <div className="mt-6 flex gap-3 flex-wrap">
+          {!order.trackingId && order.shipmentStatus === "Booked" && (
             <button
-              className="bg-green-600 text-white px-4 py-2 rounded-lg"
-              onClick={refreshTracking}
-              disabled={trackLoading}
+              onClick={shipOrder}
+              disabled={shipLoading}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg"
             >
-              {trackLoading ? "Refreshing..." : "Refresh Tracking"}
+              {shipLoading ? "Generating AWB..." : "Generate AWB"}
             </button>
-          </div>
-        )}
+          )}
+
+          {order.trackingId && order.shipmentStatus === "Shipped" && (
+            <button
+              onClick={requestPickup}
+              disabled={pickupLoading}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
+            >
+              {pickupLoading ? "Requesting..." : "Request Pickup"}
+            </button>
+          )}
+
+          {order.trackingId && (
+            <div className="bg-gray-100 px-4 py-2 rounded text-sm">
+              Tracking ID: <b>{order.trackingId}</b>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Update Status UI */}
+      {/* ================= UPDATE ORDER STATUS ================= */}
       <div className="bg-white shadow rounded-xl p-6 mb-6">
-        <p className="font-semibold text-lg mb-4">Update Status</p>
+        <p className="font-semibold text-lg mb-4">Update Order Status</p>
+
         <select
           className="border p-2 rounded-lg"
           value={order.orderStatus}
@@ -152,7 +185,7 @@ const OrderDetails = () => {
         </select>
       </div>
 
-      {/* SHIPPING ADDRESS */}
+      {/* ================= SHIPPING ADDRESS ================= */}
       <div className="bg-white shadow rounded-xl p-6 mb-6">
         <p className="font-semibold text-lg mb-4">Shipping Address</p>
         <p><b>{order.shippingAddress.name}</b></p>
@@ -162,7 +195,7 @@ const OrderDetails = () => {
         <p>Phone: {order.shippingAddress.phone}</p>
       </div>
 
-      {/* ITEMS */}
+      {/* ================= ITEMS ================= */}
       <div className="bg-white shadow rounded-xl p-6">
         <p className="font-semibold text-lg mb-4">Order Items</p>
 
@@ -173,12 +206,10 @@ const OrderDetails = () => {
               src={it.productId?.images?.[0]?.url || "https://via.placeholder.com/60"}
               alt=""
             />
-
             <div className="flex-1">
               <p>{it.productId?.name || it.name}</p>
               <p className="text-sm text-gray-600">Qty: {it.quantity}</p>
             </div>
-
             <p className="font-semibold text-orange-600">₹{it.price}</p>
           </div>
         ))}

@@ -106,22 +106,20 @@ export const createOrder = asyncHandler(async (req, res) => {
 
       const shiprocketRes = await ShiprocketService.request(
         "post",
-        "/orders/create",
+        "/orders/create/adhoc",
         payload
       );
 
-      order[0].shipmentId = shiprocketRes.shipment_id;
-      order[0].trackingId = shiprocketRes.awb_code;
-      order[0].courierName = shiprocketRes.courier_name;
+      order[0].shipmentId = shiprocketRes.data.shipment_id;
       order[0].shipmentStatus = "Booked";
 
       await order[0].save();
+      console.log("✅ Shiprocket Create Order Response:", shiprocketRes.data);
     } catch (err) {
       console.error(
         "Shiprocket booking failed:",
         err.response?.data || err.message
       );
-      // ❗ DO NOT throw — order should still succeed
     }
 
     res.status(201).json({
@@ -198,7 +196,6 @@ export const deleteOrder = asyncHandler(async (req, res) => {
   await order.deleteOne();
   res.status(200).json({ success: true, message: "Order deleted" });
 });
-
 
 export const getOrderTracking = asyncHandler(async (req, res) => {
   const order = await Order.findOne({

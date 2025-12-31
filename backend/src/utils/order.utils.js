@@ -1,11 +1,6 @@
 import Product from "../models/product.model.js";
 
-/**
- * Build validated order items
- * - ensures product exists
- * - ensures stock is enough
- * - calculates itemsPrice
- */
+
 export const buildFinalOrderItems = async (orderItems) => {
   const productIds = orderItems.map((it) => it.productId);
 

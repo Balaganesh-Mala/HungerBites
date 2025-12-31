@@ -22,7 +22,10 @@ const loginShiprocket = async () => {
 
     return shiprocketToken;
   } catch (err) {
-    console.error("❌ Shiprocket Login Failed", err.response?.data || err.message);
+    console.error(
+      "❌ Shiprocket Login Failed",
+      err.response?.data || err.message
+    );
     throw new Error("Unable to authenticate Shiprocket");
   }
 };
@@ -39,6 +42,14 @@ const getShiprocketToken = async () => {
 /* ================= API REQUEST WRAPPER ================= */
 const shiprocketRequest = async (method, url, data = {}) => {
   try {
+    if (url.startsWith("/orders/create")) {
+      data.is_manual_order = 1;
+      data.channel_id = Number(process.env.SHIPROCKET_CHANNEL_ID);
+      data.inventory_sync = false;
+    }
+
+    console.log("🚚 Shiprocket Payload:", data);
+
     const token = await getShiprocketToken();
 
     return await axios({
@@ -52,7 +63,6 @@ const shiprocketRequest = async (method, url, data = {}) => {
       },
     });
   } catch (err) {
-    // 🔁 Retry once if token expired
     if (err.response?.status === 401) {
       shiprocketToken = null;
       const token = await loginShiprocket();
@@ -73,7 +83,6 @@ const shiprocketRequest = async (method, url, data = {}) => {
       "🚚 Shiprocket API Error:",
       err.response?.data || err.message
     );
-
     throw new Error("Shiprocket service unavailable");
   }
 };
@@ -84,22 +93,13 @@ export const ShiprocketService = {
 };
 
 export const generateAWB = async (shipmentId) => {
-  return ShiprocketService.request(
-    "post",
-    "/courier/assign/awb",
-    {
-      shipment_id: shipmentId,
-    }
-  );
+  return ShiprocketService.request("post", "/courier/assign/awb", {
+    shipment_id: shipmentId,
+  });
 };
 
 export const requestPickup = async (shipmentId) => {
-  return ShiprocketService.request(
-    "post",
-    "/courier/generate/pickup",
-    {
-      shipment_id: [shipmentId],
-    }
-  );
+  return ShiprocketService.request("post", "/courier/generate/pickup", {
+    shipment_id: [shipmentId],
+  });
 };
-

@@ -12,6 +12,7 @@ const Orders = () => {
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -52,9 +53,7 @@ const Orders = () => {
       const res = await getMyOrdersApi();
       let data = res.data.orders || [];
 
-      data = data.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
+      data = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
       setOrders(data);
       setFilteredOrders(data);
@@ -72,13 +71,16 @@ const Orders = () => {
   /** ===========================
    * TRACK ORDER
    * =========================== */
-  const trackOrder = async (trackingId) => {
+  const trackOrder = async (orderId) => {
     try {
-      const res = await trackOrderApi(trackingId);
+      setTrackingLoading(true);
+      const res = await trackOrderApi(orderId);
       setTrackingData(res.data);
       setTrackingModal(true);
     } catch {
       Swal.fire("Error", "Unable to fetch tracking details", "error");
+    } finally {
+      setTrackingLoading(false);
     }
   };
 
@@ -139,7 +141,10 @@ const Orders = () => {
     }
 
     if (statusFilter !== "all") {
-      updated = updated.filter((o) => o.orderStatus === statusFilter);
+      updated = updated.filter(
+        (o) =>
+          o.orderStatus === statusFilter || o.shipmentStatus === statusFilter
+      );
     }
 
     setFilteredOrders(updated);
@@ -149,22 +154,21 @@ const Orders = () => {
    * UNLOGGED USER UI
    * =========================== */
   if (!token && !loading) {
-  return (
-    <div className="flex flex-col justify-center items-center py-28">
-      <p className="text-xl text-slate-700 font-medium mb-4">
-        Login to view your orders
-      </p>
+    return (
+      <div className="flex flex-col justify-center items-center py-28">
+        <p className="text-xl text-slate-700 font-medium mb-4">
+          Login to view your orders
+        </p>
 
-      <button
-        onClick={() => navigate("/login")}
-        className="bg-orange-600 text-white px-5 py-2 rounded-lg hover:bg-orange-700 transition"
-      >
-        Login to View Orders
-      </button>
-    </div>
-  );
-}
-
+        <button
+          onClick={() => navigate("/login")}
+          className="bg-orange-600 text-white px-5 py-2 rounded-lg hover:bg-orange-700 transition"
+        >
+          Login to View Orders
+        </button>
+      </div>
+    );
+  }
 
   /** ===========================
    * LOADING UI
@@ -262,8 +266,8 @@ const Orders = () => {
                       <div className="flex items-center gap-2">
                         <img
                           src={
-                            order.orderItems?.[0]?.productId?.images?.[0]?.url ??
-                            "https://via.placeholder.com/50"
+                            order.orderItems?.[0]?.productId?.images?.[0]
+                              ?.url ?? "https://via.placeholder.com/50"
                           }
                           className="w-12 h-12 rounded-lg object-cover border"
                           alt="product"
@@ -287,16 +291,26 @@ const Orders = () => {
                     <td className="p-3">
                       <span
                         className={`px-3 py-1 text-xs rounded-full ${
-                          statusColors[order.orderStatus]
+                          statusColors[
+                            order.shipmentStatus || order.orderStatus
+                          ]
                         }`}
                       >
-                        {order.orderStatus}
+                        {order.shipmentStatus || order.orderStatus}
                       </span>
                     </td>
 
-                    <td className="p-3 text-blue-600 text-sm">
-                      Click to expand ↓
-                    </td>
+                    {order.trackingId && (
+                      <button
+                        disabled={
+                          !order.shipmentStatus ||
+                          order.shipmentStatus === "Booked"
+                        }
+                        className="text-xs bg-blue-600 text-white px-2 py-1 rounded disabled:opacity-50"
+                      >
+                        Track
+                      </button>
+                    )}
                   </tr>
 
                   <AnimatePresence>
@@ -343,10 +357,7 @@ const Orders = () => {
                                 <div className="flex items-center gap-2">
                                   {order.trackingId && (
                                     <button
-                                      onClick={() =>
-                                        trackOrder(order.trackingId)
-                                      }
-                                      className="text-xs bg-blue-600 text-white px-2 py-1 rounded"
+                                      onClick={() => trackOrder(order._id)}
                                     >
                                       Track
                                     </button>
@@ -454,44 +465,64 @@ const Orders = () => {
       {trackingModal && (
         <div
           className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"
-          onClick={() => setTrackingModal(false)}
+          onClick={() => {
+            setTrackingModal(false);
+            setTrackingData(null);
+          }}
         >
           <div
             className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold mb-3">Tracking Details</h3>
+            <h3 className="text-lg font-bold mb-4">Tracking Details</h3>
 
-            <p>
-              <strong>Tracking ID:</strong> {trackingData?.trackingId}
+            {/* Tracking ID */}
+            <p className="text-sm">
+              <strong>Tracking ID:</strong>{" "}
+              {trackingData?.trackingId || "Not assigned yet"}
             </p>
 
-            <p className="mt-2">
+            {/* Courier */}
+            <p className="text-sm mt-1">
+              <strong>Courier:</strong> {trackingData?.courier || "—"}
+            </p>
+
+            {/* Shipment Status */}
+            <p className="mt-3">
               <strong>Status:</strong>{" "}
               <span className="font-semibold text-blue-600">
-                {trackingData?.status}
+                {trackingData?.shipmentStatus || "Pending"}
               </span>
             </p>
 
+            {/* Tracking History */}
             <div className="mt-4 border-t pt-3">
-              <h4 className="font-semibold mb-2">History</h4>
-              {trackingData?.history?.length ? (
-                trackingData.history.map((h, i) => (
+              <h4 className="font-semibold mb-2">Tracking History</h4>
+
+              {trackingData?.trackingHistory?.length ? (
+                trackingData.trackingHistory.map((h, i) => (
                   <div key={i} className="text-sm border-b py-2">
-                    <p>{new Date(h.date).toLocaleString()}</p>
-                    <p>Status: {h.status}</p>
+                    <p className="text-gray-700">
+                      {h.time ? new Date(h.time).toLocaleString() : "—"}
+                    </p>
+                    <p>
+                      <strong>Status:</strong> {h.status}
+                    </p>
+                    {h.location && (
+                      <p className="text-gray-500">Location: {h.location}</p>
+                    )}
                   </div>
                 ))
               ) : (
                 <p className="text-sm text-gray-500">
-                  No history available.
+                  Tracking updates will appear once the order is shipped.
                 </p>
               )}
             </div>
 
             <button
               onClick={() => setTrackingModal(false)}
-              className="mt-4 w-full py-2 bg-gray-300 rounded-lg"
+              className="mt-5 w-full py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
             >
               Close
             </button>
